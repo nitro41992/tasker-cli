@@ -20,7 +20,7 @@ project_list = []
 format_str = "%A, %d %b %Y %I:%M:%S %p"
 filename_format = '%Y-%m-%d %I%M-%p'
 task_table_columns = ["Task Name", "Project Name", "Start Date", "End Date", "Last Restart Date", "Last Paused Date", "Paused", "Duration"]
-command_list = ['add_task', 'delete_task', 'end_task', 'pending_tasks', 'task_list', 
+command_list = ['add_task', 'delete_task', 'end_task', 'list_pending_tasks', 'list_tasks', 
 	'pause_task', 'restart_task', 'update_task_name', 'exit', 'export_completed_tasks']
 sorted_commands = sorted(command_list, key=str.lower)
 
@@ -103,15 +103,18 @@ while 1:
 		task_to_end = task_session.prompt(
 			'Select Started Task to End: ',
 			completer = task_command_completer,
-		).split(' - ')[0]
+		)
+
+		current_task_project = task_to_end.split(' - ')[1]
+		task_to_end = task_to_end.split(' - ')[0]
 
 		current_time = get_timestamp()
-
 		task_list = select_column(task_table.search(where('end_date') == ''), 'task_name')
+		paused_tasks = select_column(task_table.search((where('paused') == True) & (where('project_name') == current_task_project)), 'task_name')
 
 		if task_to_end in task_list:
 			current_start_time = select_column(task_table.search(where('task_name') == task_to_end), 'last_restart_date')[0]
-			current_task_project = select_column(task_table.search(where('task_name') == task_to_end), 'project_name')[0]
+			# current_task_project = select_column(task_table.search(where('task_name') == task_to_end), 'project_name')[0]
 			current_duration = select_column(task_table.search(where('task_name') == task_to_end), 'duration')[0]
 
 			formatted_current_time = datetime.strptime(current_time, format_str)
@@ -126,10 +129,15 @@ while 1:
 			dt = timedelta(hours=int(hms[0]), minutes=int(hms[1]), seconds=float(hms[2]))
 
 			diff = formatted_current_time - formatted_start_date
-			paused_duration = str(dt + diff)
-		
-			task_table.update({'duration': paused_duration, 'end_date': current_time}, (where('task_name') == task_to_end) & (where('project_name') == current_task_project))
-			click.echo(f'Task: "{task_to_end}" successfully ended. Time: {current_time}')
+			total_duration = str(dt + diff)
+
+			if task_to_end not in paused_tasks:
+				task_table.update({'duration': total_duration, 'end_date': current_time, 'paused': False}, (where('task_name') == task_to_end) & (where('project_name') == current_task_project))
+				click.echo(f'Task: "{task_to_end}" successfully ended. Time: {current_time}')
+
+			else:
+				task_table.update({'end_date': current_time, 'paused': False}, (where('task_name') == task_to_end) & (where('project_name') == current_task_project))
+				click.echo(f'Task: "{task_to_end}" successfully ended. Time: {current_time}')
 
 		else:
 			click.echo('That Task does not exist or has ended, please try again.')
@@ -174,7 +182,7 @@ while 1:
 
 			click.echo('Did not understand answer to confirmation. Please try again.')
 	
-	elif user_input == 'pending_tasks':
+	elif user_input == 'list_pending_tasks':
 		pending_tasks =  task_table.search(where('end_date') == '')
 
 		click.echo('\n')
@@ -183,7 +191,7 @@ while 1:
 			x.add_row(task.values())
 		click.echo(x)
 	
-	elif user_input == 'task_list':
+	elif user_input == 'list_tasks':
 		all_tasks =  task_table.all()
 
 		click.echo('\n')
