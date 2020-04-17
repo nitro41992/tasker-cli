@@ -10,6 +10,7 @@ import time
 from tinydb import TinyDB, Query, where
 from tinydb.operations import delete
 from prettytable import PrettyTable
+from prettytable import ALL as ALL
 import csv
 
 db = TinyDB('db.json')
@@ -17,10 +18,11 @@ task_table = db.table('tasks')
 project_table = db.table('projects')
 
 number_of_concurrent_tasks = 3
+max_line_length = 20
 project_list = []
 format_str = "%A, %d %b %Y %I:%M:%S %p"
 filename_format = '%Y-%m-%d %I%M-%p'
-task_table_columns = ["Task Name", "Project Name", "Start Date", "End Date", "Last Restart Date", "Last Paused Date", "Paused", "Duration"]
+task_table_columns = ["Task Name", "Project Name", "Start Date", "End Date", "Paused", "Duration"]
 command_list = ['add_running_task', 'add_paused_task', 'delete_task', 'end_task', 'list_pending_tasks', 'list_tasks', 
 	'pause_task', 'start_paused_task', 'update_task_name', 'exit', 'export_completed_tasks', 'pause_all_tasks', 'delete_completed_tasks']
 sorted_commands = sorted(command_list, key=str.lower)
@@ -55,6 +57,33 @@ def to_csv(data_list, name):
 		dict_writer = csv.DictWriter(output_file, keys)
 		dict_writer.writeheader()
 		dict_writer.writerows(data_list)	
+
+def format_column_value(line, max_line_length):
+    ACC_length = 0
+    words = line.split(" ")
+    formatted_comment = ""
+    for word in words:
+        if ACC_length + (len(word) + 1) <= max_line_length:
+            formatted_comment = formatted_comment + word + " "
+            ACC_length = ACC_length + len(word) + 1
+        else:
+
+            formatted_comment = formatted_comment + "\n" + word + " "
+            ACC_length = len(word) + 1
+    return formatted_comment
+
+def output_task_table(dict_list, columns):
+
+	cli_table = PrettyTable(hrules=ALL)
+	cli_table.field_names = columns
+
+	for task in dict_list:
+		for column in columns:
+			column = column.lower().replace(" ", "_")
+			if type(task[column]) != bool:
+				task[column] = format_column_value(task[column], max_line_length)
+		cli_table.add_row([task['task_name'], task['project_name'], task['start_date'], task['end_date'], task['paused'], task['duration']])
+	click.echo(cli_table)
 
 command_completer = WordCompleter(
 	sorted_commands, 
@@ -221,23 +250,15 @@ while 1:
 		pending_tasks =  task_table.search(where('end_date') == '')
 
 		if len(pending_tasks) > 0:
-			click.echo('\n')
-			x = PrettyTable(task_table_columns)
-			for task in pending_tasks:
-				x.add_row(task.values())
-			click.echo(x)
+			output_task_table(pending_tasks, task_table_columns)
 		else:
 			click.echo('There are no pending Tasks.')
 	
 	elif user_input == 'list_tasks':
 		all_tasks =  task_table.all()
-
+		print(all_tasks)
 		if len(all_tasks) > 0:
-			click.echo('\n')
-			x = PrettyTable(task_table_columns)
-			for task in all_tasks:
-				x.add_row(task.values())
-			click.echo(x)
+			output_task_table(all_tasks, task_table_columns)
 		else:
 			click.echo('No Tasks have been added yet.')
 
@@ -440,7 +461,6 @@ while 1:
 		else:
 
 			click.echo('There are no completed tasks to remove.')
-
 
 	else:
 		click.echo('Not a valid command. Press TAB to view list of possible commands. \n')
