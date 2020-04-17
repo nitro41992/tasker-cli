@@ -92,7 +92,7 @@ while 1:
 			click.echo('That Task name already exists for that project. Please choose a different Task name')
 
 	elif user_input == 'end_task':
-		task_list = select_column(task_table.search(where('end_date') == ''), 'task_name')
+		task_list = select_column(task_table.search(where('end_date') == ''), 'task_name', 'project_name')
 		task_command_completer = WordCompleter(task_list, ignore_case=True)
 
 		task_session = PromptSession()
@@ -100,9 +100,11 @@ while 1:
 		task_to_end = task_session.prompt(
 			'Select Started Task to End: ',
 			completer = task_command_completer,
-		)
+		).split(' - ')[0]
 
 		current_time = get_timestamp()
+
+		task_list = select_column(task_table.search(where('end_date') == ''), 'task_name')
 
 		if task_to_end in task_list:
 			current_start_time = select_column(task_table.search(where('task_name') == task_to_end), 'last_restart_date')[0]
@@ -130,7 +132,7 @@ while 1:
 			click.echo('That Task does not exist or has ended, please try again.')
 	
 	elif user_input == 'delete_task':
-		task_list = select_column(task_table.all(), 'task_name')
+		task_list = select_column(task_table.all(), 'task_name', 'project_name')
 		task_command_completer = WordCompleter(task_list, ignore_case=True)
 
 		task_session = PromptSession()
@@ -138,7 +140,9 @@ while 1:
 		task_to_delete = task_session.prompt(
 			'Select Task to Delete: ',
 			completer = task_command_completer,
-		)
+		).split(' - ')[0]
+
+		task_list = select_column(task_table.all(), 'task_name')
 
 		confirm =  task_session.prompt(
 			f'Are you sure you want to delete "{task_to_delete}" (y/n): ',
@@ -149,19 +153,22 @@ while 1:
 
 			diff = 0
 		
-			try:
-				current_task_project = select_column(task_table.search(where('task_name') == task_to_delete), 'project_name')[0]
-			except:
-				pass
-
 			if task_to_delete in task_list:
+
+				current_task_project = select_column(task_table.search(where('task_name') == task_to_delete), 'project_name')[0]
 				task_table.remove((where('task_name') == task_to_delete) & (where('project_name') == current_task_project) )
 				click.echo(f'Task: "{task_to_delete}" successfully deleted.')
+
 			else:
+
 				click.echo('That Task does not exist, please try again.')
+
 		elif confirm == 'n':
+
 			click.echo('Deletion cancelled.')
+
 		else:
+
 			click.echo('Did not understand answer to confirmation. Please try again.')
 	
 	elif user_input == 'list_pending_tasks':
@@ -184,7 +191,7 @@ while 1:
 
 	elif user_input == 'pause_task':
 		
-		task_list = select_column(task_table.search(where('end_date') == ''), 'task_name')
+		task_list = select_column(task_table.search((where('end_date') == '') & (where('paused') == False)), 'task_name', 'project_name')
 		task_command_completer = WordCompleter(task_list, ignore_case=True)
 
 		task_session = PromptSession()
@@ -192,9 +199,11 @@ while 1:
 		task_to_pause = task_session.prompt(
 			'Select Started Task to Pause: ',
 			completer = task_command_completer,
-		)
+		).split(' - ')[0]
 
 		current_time = get_timestamp()
+
+		task_list = select_column(task_table.search((where('end_date') == '') & (where('paused') == False)), 'task_name')
 
 		if task_to_pause in task_list:
 			current_start_time = select_column(task_table.search(where('task_name') == task_to_pause), 'last_restart_date')[0]
@@ -218,11 +227,11 @@ while 1:
 			task_table.update({'duration': paused_duration, 'last_paused_date': current_time, 'paused': True}, (where('task_name') == task_to_pause) & (where('project_name') == current_task_project))
 			click.echo(f'Task: "{task_to_pause}" successfully paused. Time: {current_time}')
 		else:
-			click.echo('That Task does not exist, please try again.')
+			click.echo('That Task does not exist or is already Paused, please try again.')
 
 	elif user_input == 'restart_task':
 
-		task_list = select_column(task_table.search(where('end_date') == ''), 'task_name')
+		task_list = select_column(task_table.search((where('end_date') == '') & (where('paused') == True)), 'task_name', 'project_name')
 		task_command_completer = WordCompleter(task_list, ignore_case=True)
 
 		task_session = PromptSession()
@@ -230,9 +239,10 @@ while 1:
 		task_to_restart = task_session.prompt(
 			'Select Paused Task to Restart: ',
 			completer = task_command_completer,
-		)
+		).split(' - ')[0]
 
 		current_time = get_timestamp()
+		task_list = select_column(task_table.search((where('end_date') == '') & (where('paused') == True)), 'task_name')
 
 		if task_to_restart in task_list:
 			is_ended = select_column(task_table.search(where('task_name') == task_to_restart), 'end_date')[0]
@@ -244,7 +254,7 @@ while 1:
 			else:
 				click.echo('The Task has ended. Please create a new Task.')
 		else:
-			click.echo('That Task does not exist, please try again.')
+			click.echo('That Task does not exist or is not Paused, please try again.')
 
 	elif user_input == 'update_task_name':
 
@@ -264,7 +274,9 @@ while 1:
 			default = task_to_update_name
 		).split(' - ')[0]
 
-		if task_to_update_name in select_column(task_table.all(), 'task_name'):
+		task_list = select_column(task_table.all(), 'task_name')
+
+		if task_to_update_name in task_list:
 			current_task_project = select_column(task_table.search(where('task_name') == task_to_update_name), 'project_name')[0]
 			existing_task_names = select_column(task_table.search(where('project_name') == current_task_project), 'task_name')
 		
