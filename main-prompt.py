@@ -5,7 +5,7 @@ from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit import PromptSession
 import click
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
 from tinydb import TinyDB, Query, where
 from tinydb.operations import delete
@@ -17,6 +17,7 @@ project_table = db.table('projects')
 
 project_list = []
 format_str = "%A, %d %b %Y %I:%M:%S %p"
+task_table_columns = ["Task Name", "Project Name", "Start Date", "End Date", "Last Restart Date", "Last Paused Date", "Paused", "Duration"]
 
 def get_timestamp():
     result = datetime.now().strftime(format_str)
@@ -28,7 +29,7 @@ def select_column(list, column):
 
 command_completer = WordCompleter(
 	['add_task', 'delete_task', 'end_task', 'list_pending_tasks', 'list_all_tasks', 
-	'pause_task', 'pause_all_tasks', 'restart_task', 'update_project_name', 'exit'], 
+	'pause_task', 'restart_task', 'update_project_name', 'exit'], 
 	ignore_case=True)
 
 while 1:
@@ -66,7 +67,8 @@ while 1:
 
 		start_time = get_timestamp()
 
-		task_table.insert({'task_name': task_name, 'project_name': task_project,'start_date': start_time, 'end_date': '', 'duration': ''})
+		task_table.insert({'task_name': task_name, 'project_name': task_project, 'start_date': start_time, 'end_date': '',
+		 'last_restart_date': start_time, 'last_paused_date': '', 'paused': False, 'duration': '0 days, 0:00:00'})
 		
 		if task_project not in project_list:
 			project_table.insert({'project_name': task_project, 'created_on': start_time})
@@ -74,7 +76,6 @@ while 1:
 		click.echo(f'Task: "{task_name}" successfully started. Time: {start_time}')
 
 	elif user_input == 'end_task':
-
 		task_list = select_column(task_table.search(where('end_date') == ''), 'task_name')
 		task_command_completer = WordCompleter(task_list, ignore_case=True)
 
@@ -146,7 +147,7 @@ while 1:
 		pending_tasks =  task_table.search(where('end_date') == '')
 
 		click.echo('\n')
-		x = PrettyTable(["Task Name", "Project Name", "Start Date", "End Date", "Duration"])
+		x = PrettyTable(task_table_columns)
 		for task in pending_tasks:
 			x.add_row(task.values())
 		click.echo(x)
@@ -155,25 +156,77 @@ while 1:
 		all_tasks =  task_table.all()
 
 		click.echo('\n')
-		x = PrettyTable(["Task Name", "Project Name", "Start Date", "End Date", "Duration"])
+		x = PrettyTable(task_table_columns)
 		for task in all_tasks:
 			x.add_row(task.values())
 		click.echo(x)
 
-	elif user_input == 'restart_task':
-		pass
-
 	elif user_input == 'pause_task':
-		pass
+		
+		task_list = select_column(task_table.search(where('end_date') == ''), 'task_name')
+		task_command_completer = WordCompleter(task_list, ignore_case=True)
 
-	elif user_input == 'pause_all_tasks':
-		pass
-	
+		task_session = PromptSession()
+
+		task_to_pause = task_session.prompt(
+			'Select Started Task to Pause: ',
+			completer = task_command_completer,
+		)
+
+		current_time = get_timestamp()
+
+		if task_to_pause in task_list:
+			current_start_time = select_column(task_table.search(where('task_name') == task_to_pause), 'last_restart_date')[0]
+			current_task_project = select_column(task_table.search(where('task_name') == task_to_pause), 'project_name')[0]
+			current_duration = select_column(task_table.search(where('task_name') == task_to_pause), 'duration')[0]
+
+			formatted_current_time = datetime.strptime(current_time, format_str)
+			formatted_start_date = datetime.strptime(current_start_time, format_str)
+			
+			if 'date' in current_duration:
+				days_v_hms = current_duration.split('days,')
+				hms = days_v_hms[1].split(':')
+			else:
+				hms = current_duration.split(':')
+
+			dt = timedelta(hours=int(hms[0]), minutes=int(hms[1]), seconds=float(hms[2]))
+
+			diff = formatted_current_time - formatted_start_date
+			paused_duration = str(dt + diff)
+		
+			task_table.update({'duration': paused_duration, 'last_paused_date': current_time, 'paused': True}, (where('task_name') == task_to_pause) & (where('project_name') == current_task_project))
+			click.echo(f'Task: "{task_to_pause}" successfully paused. Time: {current_time}')
+		else:
+			click.echo('That Task does not exist, please try again.')
+
+	elif user_input == 'restart_task':
+
+		task_list = select_column(task_table.search(where('end_date') == ''), 'task_name')
+		task_command_completer = WordCompleter(task_list, ignore_case=True)
+
+		task_session = PromptSession()
+
+		task_to_restart = task_session.prompt(
+			'Select Started Task to Restart: ',
+			completer = task_command_completer,
+		)
+
+		current_time = get_timestamp()
+
+		try:
+			current_task_project = select_column(task_table.search(where('task_name') == task_to_restart), 'project_name')[0]
+		except:
+			pass
+
+		if task_to_restart in task_list:
+			task_table.update({'last_restart_date': current_time, 'paused': False}, (where('task_name') == task_to_restart) & (where('project_name') == current_task_project))
+			click.echo(f'Task: "{task_to_restart}" successfully restarted. Time: {current_time}')
+		else:
+			click.echo('That Task does not exist, please try again.')
+
 	else:
 		click.echo('Not a valid command. Press TAB to view list of possible commands. \n')
 
 
-
-
 # task_table.purge()
-project_table.purge()
+# project_table.purge()
