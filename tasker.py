@@ -22,7 +22,7 @@ format_str = "%A, %d %b %Y %I:%M:%S %p"
 filename_format = '%Y-%m-%d %I%M-%p'
 task_table_columns = ["Task Name", "Project Name", "Start Date", "End Date", "Last Restart Date", "Last Paused Date", "Paused", "Duration"]
 command_list = ['add_running_task', 'add_paused_task', 'delete_task', 'end_task', 'list_pending_tasks', 'list_tasks', 
-	'pause_task', 'start_paused_task', 'update_task_name', 'exit', 'export_completed_tasks']
+	'pause_task', 'start_paused_task', 'update_task_name', 'exit', 'export_completed_tasks', 'pause_all_tasks']
 sorted_commands = sorted(command_list, key=str.lower)
 
 def get_timestamp(format = format_str):
@@ -371,6 +371,41 @@ while 1:
 			dict_writer.writerows(data_list)
 
 		click.echo('Completed tasks exported. \n')
+
+	elif user_input == 'pause_all_tasks':
+		
+		task_list = select_column(task_table.search((where('end_date') == '') & (where('paused') == False)), 'task_name', 'project_name')
+
+		if len(task_list) > 0:
+			
+			for task_to_pause in task_list:
+
+				current_time = get_timestamp()
+				current_task_project = task_to_pause.split(' - ')[1]
+				task_to_pause = task_to_pause.split(' - ')[0]
+
+				current_start_time = select_column(task_table.search(where('task_name') == task_to_pause), 'last_restart_date')[0]
+				current_duration = select_column(task_table.search(where('task_name') == task_to_pause), 'duration')[0]
+
+				formatted_current_time = datetime.strptime(current_time, format_str)
+				formatted_start_date = datetime.strptime(current_start_time, format_str)
+				
+				if 'days' in current_duration:
+					days_v_hms = current_duration.split('days,')
+					hms = days_v_hms[1].split(':')
+				else:
+					hms = current_duration.split(':')
+
+				dt = timedelta(hours=int(hms[0]), minutes=int(hms[1]), seconds=float(hms[2]))
+
+				diff = formatted_current_time - formatted_start_date
+				paused_duration = str(dt + diff)
+			
+				task_table.update({'duration': paused_duration, 'last_paused_date': current_time, 'paused': True}, (where('task_name') == task_to_pause) & (where('project_name') == current_task_project))
+				click.echo(f'Task: "{task_to_pause}" successfully paused. Time: {current_time}')
+
+		else:
+			click.echo('There are no running Tasks to Pause.')
 
 	else:
 		click.echo('Not a valid command. Press TAB to view list of possible commands. \n')
