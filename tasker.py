@@ -247,24 +247,25 @@ while 1:
 			wrap_lines=False,
 			complete_while_typing=True
 		)
+		
+		if task_to_delete in task_list:
 
-		task_list = select_column(task_table.all(), 'task_name')
-		current_task_project = task_to_delete.split(' - ')[1]
-		task_to_delete = task_to_delete.split(' - ')[0]
+			task_list = select_column(task_table.all(), 'task_name')
+			current_task_project = task_to_delete.split(' - ')[1]
+			task_to_delete = task_to_delete.split(' - ')[0]
 
-		confirm =  task_session.prompt(f'Are you sure you want to delete "{task_to_delete}" (y/n): ')
+			confirm =  task_session.prompt(f'Are you sure you want to delete "{task_to_delete}" (y/n): ')
 
-		if confirm == 'y':
-			if task_to_delete in task_list:
-				task_table.remove((where('task_name') == task_to_delete) & (where('project_name') == current_task_project) )
-				custom_print_green(f'Task: "{task_to_delete}" successfully deleted.')
+			if confirm == 'y':
+					task_table.remove((where('task_name') == task_to_delete) & (where('project_name') == current_task_project) )
+					custom_print_green(f'Task: "{task_to_delete}" successfully deleted.')
+
+			elif confirm == 'n':
+				custom_print_green('Deletion cancelled.')
 			else:
-				custom_print_red('That Task does not exist, please try again.')
-
-		elif confirm == 'n':
-			custom_print_green('Deletion cancelled.')
+				custom_print_red('Did not understand answer to confirmation. Please try again.')
 		else:
-			custom_print_red('Did not understand answer to confirmation. Please try again.')
+				custom_print_red('That Task does not exist, please try again.')
 	
 	elif user_input == 'list_pending_tasks':
 		pending_tasks =  task_table.search(where('end_date') == '')
