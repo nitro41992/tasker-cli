@@ -16,6 +16,7 @@ db = TinyDB('db.json')
 task_table = db.table('tasks')
 project_table = db.table('projects')
 
+number_of_concurrent_tasks = 3
 project_list = []
 format_str = "%A, %d %b %Y %I:%M:%S %p"
 filename_format = '%Y-%m-%d %I%M-%p'
@@ -47,13 +48,11 @@ command_completer = WordCompleter(
 click.echo('Welcome to Tasker, press TAB to see the list of commands.')
 while 1:
 
-
 	user_input = prompt(
 		'tasker > ',
 		history=FileHistory('history.txt'),
 		auto_suggest=AutoSuggestFromHistory(),
-		completer=command_completer
-	)
+		completer=command_completer)
 
 	if user_input == 'exit':
 
@@ -79,18 +78,22 @@ while 1:
 			completer=project_command_completer
 		)
 
-
 		start_time = get_timestamp()
 		existing_task_names = select_column(task_table.search(where('project_name') == task_project), 'task_name')
+		running_tasks = select_column(task_table.search((where('end_date') == '') & (where('paused') == False)), 'task_name')
 
 		if task_name not in existing_task_names:
-			task_table.insert({'task_name': task_name, 'project_name': task_project, 'start_date': start_time, 'end_date': '',
-			'last_restart_date': start_time, 'last_paused_date': '', 'paused': False, 'duration': '0 days, 0:00:00'})
 
-			if task_project not in project_list:
-				project_table.insert({'project_name': task_project, 'created_on': start_time})
+			if len(running_tasks) < number_of_concurrent_tasks:
+				task_table.insert({'task_name': task_name, 'project_name': task_project, 'start_date': start_time, 'end_date': '',
+				'last_restart_date': start_time, 'last_paused_date': '', 'paused': False, 'duration': '0 days, 0:00:00'})
+				click.echo(f'Task: "{task_name}" successfully started. Time: {start_time}')
 
-			click.echo(f'Task: "{task_name}" successfully started. Time: {start_time}')
+				if task_project not in project_list:
+					project_table.insert({'project_name': task_project, 'created_on': start_time})
+
+			else: 
+				click.echo('You can only have a maximum of 3 running tasks at any time. Please Pause or End existing running Tasks.')
 		else:
 			click.echo('That Task name already exists for that project. Please choose a different Task name')
 
@@ -182,9 +185,11 @@ while 1:
 		task_to_delete = task_session.prompt(
 			'Select Task to Delete: ',
 			completer = task_command_completer,
-		).split(' - ')[0]
+		)
 
 		task_list = select_column(task_table.all(), 'task_name')
+		current_task_project = task_to_delete.split(' - ')[1]
+		task_to_delete = task_to_delete.split(' - ')[0]
 
 		confirm =  task_session.prompt(
 			f'Are you sure you want to delete "{task_to_delete}" (y/n): ',
@@ -192,12 +197,10 @@ while 1:
 
 		if confirm == 'y':
 			task_end_time = get_timestamp()
-
 			diff = 0
 		
 			if task_to_delete in task_list:
 
-				current_task_project = select_column(task_table.search(where('task_name') == task_to_delete), 'project_name')[0]
 				task_table.remove((where('task_name') == task_to_delete) & (where('project_name') == current_task_project) )
 				click.echo(f'Task: "{task_to_delete}" successfully deleted.')
 
@@ -241,15 +244,15 @@ while 1:
 		task_to_pause = task_session.prompt(
 			'Select Started Task to Pause: ',
 			completer = task_command_completer,
-		).split(' - ')[0]
+		)
 
 		current_time = get_timestamp()
-
+		current_task_project = task_to_pause.split(' - ')[1]
+		task_to_pause = task_to_pause.split(' - ')[0]
 		task_list = select_column(task_table.search((where('end_date') == '') & (where('paused') == False)), 'task_name')
 
 		if task_to_pause in task_list:
 			current_start_time = select_column(task_table.search(where('task_name') == task_to_pause), 'last_restart_date')[0]
-			current_task_project = select_column(task_table.search(where('task_name') == task_to_pause), 'project_name')[0]
 			current_duration = select_column(task_table.search(where('task_name') == task_to_pause), 'duration')[0]
 
 			formatted_current_time = datetime.strptime(current_time, format_str)
@@ -288,14 +291,18 @@ while 1:
 
 		current_time = get_timestamp()
 		task_list = select_column(task_table.search((where('end_date') == '') & (where('paused') == True)), 'task_name')
+		running_tasks = select_column(task_table.search((where('end_date') == '') & (where('paused') == False)), 'task_name')
 
 		if task_to_restart in task_list:
 
 			is_ended = select_column(task_table.search((where('task_name') == task_to_restart) & (where('project_name') == current_task_project)), 'end_date')[0]
 			if is_ended == '':
-				
-				task_table.update({'last_restart_date': current_time, 'paused': False}, (where('task_name') == task_to_restart) & (where('project_name') == current_task_project))
-				click.echo(f'Task: "{task_to_restart}" successfully restarted. Time: {current_time}')
+				if len(running_tasks) < number_of_concurrent_tasks:
+					task_table.update({'last_restart_date': current_time, 'paused': False}, (where('task_name') == task_to_restart) & (where('project_name') == current_task_project))
+					click.echo(f'Task: "{task_to_restart}" successfully restarted. Time: {current_time}')
+
+				else: 
+					click.echo('You can only have a maximum of 3 running tasks at any time. Please Pause or End existing running Tasks.')
 
 			else:
 				click.echo('The Task has ended. Please create a new Task.')
@@ -312,7 +319,7 @@ while 1:
 		task_to_update_name = task_session.prompt(
 			'Select Task to Update: ',
 			completer = task_command_completer,
-		).split(' - ')[0]
+		)
 
 		name_to_update_to = task_session.prompt(
 			'Update the Task Name: ',
@@ -321,9 +328,11 @@ while 1:
 		).split(' - ')[0]
 
 		task_list = select_column(task_table.all(), 'task_name')
+		current_task_project = task_to_update_name.split(' - ')[1]
+		task_to_update_name = task_to_update_name.split(' - ')[0]
 
 		if task_to_update_name in task_list:
-			current_task_project = select_column(task_table.search(where('task_name') == task_to_update_name), 'project_name')[0]
+			
 			existing_task_names = select_column(task_table.search(where('project_name') == current_task_project), 'task_name')
 		
 			if name_to_update_to not in existing_task_names:
