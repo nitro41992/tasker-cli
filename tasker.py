@@ -20,8 +20,8 @@ project_list = []
 format_str = "%A, %d %b %Y %I:%M:%S %p"
 filename_format = '%Y-%m-%d %I%M-%p'
 task_table_columns = ["Task Name", "Project Name", "Start Date", "End Date", "Last Restart Date", "Last Paused Date", "Paused", "Duration"]
-command_list = ['add_task', 'delete_task', 'end_task', 'list_pending_tasks', 'list_tasks', 
-	'pause_task', 'restart_task', 'update_task_name', 'exit', 'export_completed_tasks']
+command_list = ['add_running_task', 'add_paused_task', 'delete_task', 'end_task', 'list_pending_tasks', 'list_tasks', 
+	'pause_task', 'start_paused_task', 'update_task_name', 'exit', 'export_completed_tasks']
 sorted_commands = sorted(command_list, key=str.lower)
 
 def get_timestamp(format = format_str):
@@ -63,7 +63,7 @@ while 1:
 		click.echo('Goodbye.')
 		break
 
-	elif user_input == 'add_task':
+	elif user_input == 'add_running_task':
 
 		project_list = select_column(project_table.all(), 'project_name')
 		project_command_completer = WordCompleter(project_list, ignore_case=True)
@@ -86,6 +86,37 @@ while 1:
 		if task_name not in existing_task_names:
 			task_table.insert({'task_name': task_name, 'project_name': task_project, 'start_date': start_time, 'end_date': '',
 			'last_restart_date': start_time, 'last_paused_date': '', 'paused': False, 'duration': '0 days, 0:00:00'})
+
+			if task_project not in project_list:
+				project_table.insert({'project_name': task_project, 'created_on': start_time})
+
+			click.echo(f'Task: "{task_name}" successfully started. Time: {start_time}')
+		else:
+			click.echo('That Task name already exists for that project. Please choose a different Task name')
+
+	elif user_input == 'add_paused_task':
+
+		project_list = select_column(project_table.all(), 'project_name')
+		project_command_completer = WordCompleter(project_list, ignore_case=True)
+
+		task_session = PromptSession()
+
+		task_name = task_session.prompt(
+			'Name: '
+		)
+		
+		task_project = task_session.prompt(
+			'Project: ',
+			completer=project_command_completer
+		)
+
+
+		start_time = get_timestamp()
+		existing_task_names = select_column(task_table.search(where('project_name') == task_project), 'task_name')
+
+		if task_name not in existing_task_names:
+			task_table.insert({'task_name': task_name, 'project_name': task_project, 'start_date': start_time, 'end_date': '',
+			'last_restart_date': '', 'last_paused_date': start_time, 'paused': True, 'duration': '0 days, 0:00:00'})
 
 			if task_project not in project_list:
 				project_table.insert({'project_name': task_project, 'created_on': start_time})
@@ -240,7 +271,7 @@ while 1:
 		else:
 			click.echo('That Task does not exist or is already Paused, please try again.')
 
-	elif user_input == 'restart_task':
+	elif user_input == 'start_paused_task':
 
 		task_list = select_column(task_table.search((where('end_date') == '') & (where('paused') == True)), 'task_name', 'project_name')
 		task_command_completer = WordCompleter(task_list, ignore_case=True)
@@ -250,18 +281,22 @@ while 1:
 		task_to_restart = task_session.prompt(
 			'Select Paused Task to Restart: ',
 			completer = task_command_completer,
-		).split(' - ')[0]
+		)
+
+		current_task_project = task_to_restart.split(' - ')[1]
+		task_to_restart = task_to_restart.split(' - ')[0]
 
 		current_time = get_timestamp()
 		task_list = select_column(task_table.search((where('end_date') == '') & (where('paused') == True)), 'task_name')
 
 		if task_to_restart in task_list:
-			is_ended = select_column(task_table.search(where('task_name') == task_to_restart), 'end_date')[0]
+
+			is_ended = select_column(task_table.search((where('task_name') == task_to_restart) & (where('project_name') == current_task_project)), 'end_date')[0]
 			if is_ended == '':
-				current_task_project = select_column(task_table.search(where('task_name') == task_to_restart), 'project_name')[0]
-			
+				
 				task_table.update({'last_restart_date': current_time, 'paused': False}, (where('task_name') == task_to_restart) & (where('project_name') == current_task_project))
 				click.echo(f'Task: "{task_to_restart}" successfully restarted. Time: {current_time}')
+
 			else:
 				click.echo('The Task has ended. Please create a new Task.')
 		else:
@@ -304,6 +339,12 @@ while 1:
 
 		completed_tasks =  task_table.search(where('end_date') != '')
 
+		task_session = PromptSession()
+
+		name = task_session.prompt(
+			'Your Name (Please be consistent with previous exports): '
+		)
+
 		click.echo('\n')
 		x = PrettyTable(task_table_columns)
 		for task in completed_tasks:
@@ -315,7 +356,7 @@ while 1:
 		data_list = completed_tasks
 
 		keys = data_list[0].keys()
-		with open(f'Completed Tasks as of {current_time}.csv', 'a', newline='') as output_file:
+		with open(f'{name} - Completed Tasks {current_time}.csv', 'a', newline='') as output_file:
 			dict_writer = csv.DictWriter(output_file, keys)
 			dict_writer.writeheader()
 			dict_writer.writerows(data_list)
