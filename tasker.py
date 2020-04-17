@@ -11,10 +11,16 @@ from tinydb.operations import delete
 from prettytable import PrettyTable
 from prettytable import ALL as ALL
 import csv
+from pyfiglet import Figlet
+from colorama import init
+from colorama import Fore
+
 
 db = TinyDB('db.json')
 task_table = db.table('tasks')
 project_table = db.table('projects')
+
+f = Figlet(font='slant')
 
 number_of_concurrent_tasks = 3
 max_line_length = 20
@@ -81,15 +87,23 @@ def output_task_table(dict_list, columns):
 		cli_table.add_row([task['task_name'], task['project_name'], task['start_date'], task['end_date'], task['paused'], task['duration']])
 	click.echo(cli_table)
 
+def custom_print_green(value):
+	return(click.echo(Fore.GREEN + value))
+
+def custom_print_red(value):
+	return(click.echo(Fore.RED + value))
+
 command_completer = WordCompleter(
 	sorted_commands, 
 	ignore_case=True)
 
-click.echo('Welcome to Tasker, press TAB to see the list of commands.')
+custom_print_green(f.renderText('tasker'))
+custom_print_green('Press TAB to see the list of commands.')
+
 while 1:
 
 	user_input = prompt(
-		'tasker > ',
+		'tasker >> ',
 		completer=command_completer,
 		wrap_lines=False,
 		complete_while_typing=True)
@@ -99,7 +113,7 @@ while 1:
 		if os.path.exists('history.txt'):
 			os.remove('history.txt')
 		
-		click.echo('Goodbye.')
+		custom_print_green('Goodbye.')
 		break
 
 	elif user_input == 'add_running_task':
@@ -129,15 +143,15 @@ while 1:
 			if len(running_tasks) < number_of_concurrent_tasks:
 				task_table.insert({'task_name': task_name, 'project_name': task_project, 'start_date': start_time, 'end_date': '',
 				'last_restart_date': start_time, 'last_paused_date': '', 'paused': False, 'duration': '0 days, 0:00:00'})
-				click.echo(f'Task: "{task_name}" successfully started. Time: {start_time}')
+				custom_print_green(f'Task: "{task_name}" successfully started. Time: {start_time}')
 
 				if task_project not in project_list:
 					project_table.insert({'project_name': task_project, 'created_on': start_time})
 
 			else: 
-				click.echo('You can only have a maximum of 3 running tasks at any time. Please Pause or End existing running Tasks.')
+				custom_print_red('You can only have a maximum of 3 running tasks at any time. Please Pause or End existing running Tasks.')
 		else:
-			click.echo('That Task name already exists for that project. Please choose a different Task name')
+			custom_print_red('That Task name already exists for that project. Please choose a different Task name')
 
 	elif user_input == 'add_paused_task':
 
@@ -168,9 +182,9 @@ while 1:
 			if task_project not in project_list:
 				project_table.insert({'project_name': task_project, 'created_on': start_time})
 
-			click.echo(f'Task: "{task_name}" successfully started. Time: {start_time}')
+			custom_print_green(f'Task: "{task_name}" successfully started. Time: {start_time}')
 		else:
-			click.echo('That Task name already exists for that project. Please choose a different Task name')
+			custom_print_red('That Task name already exists for that project. Please choose a different Task name')
 
 	elif user_input == 'end_task':
 
@@ -209,17 +223,17 @@ while 1:
 
 			if task_to_end not in paused_tasks:
 				task_table.update({'duration': total_duration, 'end_date': current_time, 'paused': False}, (where('task_name') == task_to_end) & (where('project_name') == current_task_project))
-				click.echo(f'Task: "{task_to_end}" successfully ended. Time: {current_time}')
+				custom_print_green(f'Task: "{task_to_end}" successfully ended. Time: {current_time}')
 			else:
 				if current_duration != '0 days, 0:00:00':
 					task_table.update({'end_date': current_time, 'paused': False}, (where('task_name') == task_to_end) & (where('project_name') == current_task_project))
-					click.echo(f'Task: "{task_to_end}" successfully ended. Time: {current_time}')
+					custom_print_green(f'Task: "{task_to_end}" successfully ended. Time: {current_time}')
 				else:
-					click.echo('Cannot end Task because it is paused and the duration is 0 days, 0:00:00')
+					custom_print_red('Cannot end Task because it is paused and the duration is 0 days, 0:00:00')
 
 
 		else:
-			click.echo('That Task does not exist or has ended, please try again.')
+			custom_print_red('That Task does not exist or has ended, please try again.')
 	
 	elif user_input == 'delete_task':
 		task_list = select_column(task_table.all(), 'task_name', 'project_name')
@@ -243,14 +257,14 @@ while 1:
 		if confirm == 'y':
 			if task_to_delete in task_list:
 				task_table.remove((where('task_name') == task_to_delete) & (where('project_name') == current_task_project) )
-				click.echo(f'Task: "{task_to_delete}" successfully deleted.')
+				custom_print_green(f'Task: "{task_to_delete}" successfully deleted.')
 			else:
-				click.echo('That Task does not exist, please try again.')
+				custom_print_red('That Task does not exist, please try again.')
 
 		elif confirm == 'n':
-			click.echo('Deletion cancelled.')
+			custom_print_green('Deletion cancelled.')
 		else:
-			click.echo('Did not understand answer to confirmation. Please try again.')
+			custom_print_red('Did not understand answer to confirmation. Please try again.')
 	
 	elif user_input == 'list_pending_tasks':
 		pending_tasks =  task_table.search(where('end_date') == '')
@@ -258,14 +272,14 @@ while 1:
 		if len(pending_tasks) > 0:
 			output_task_table(pending_tasks, task_table_columns)
 		else:
-			click.echo('There are no pending Tasks.')
+			custom_print_red('There are no pending Tasks.')
 	
 	elif user_input == 'list_tasks':
 		all_tasks =  task_table.all()
 		if len(all_tasks) > 0:
 			output_task_table(all_tasks, task_table_columns)
 		else:
-			click.echo('No Tasks have been added yet.')
+			custom_print_red('No Tasks have been added yet.')
 
 	elif user_input == 'pause_task':
 		
@@ -305,9 +319,9 @@ while 1:
 			paused_duration = str(dt + diff)
 		
 			task_table.update({'duration': paused_duration, 'last_paused_date': current_time, 'paused': True}, (where('task_name') == task_to_pause) & (where('project_name') == current_task_project))
-			click.echo(f'Task: "{task_to_pause}" successfully paused. Time: {current_time}')
+			custom_print_green(f'Task: "{task_to_pause}" successfully paused. Time: {current_time}')
 		else:
-			click.echo('That Task does not exist or is already Paused, please try again.')
+			custom_print_red('That Task does not exist or is already Paused, please try again.')
 
 	elif user_input == 'start_paused_task':
 
@@ -336,15 +350,15 @@ while 1:
 			if is_ended == '':
 				if len(running_tasks) < number_of_concurrent_tasks:
 					task_table.update({'last_restart_date': current_time, 'paused': False}, (where('task_name') == task_to_restart) & (where('project_name') == current_task_project))
-					click.echo(f'Task: "{task_to_restart}" successfully restarted. Time: {current_time}')
+					custom_print_green(f'Task: "{task_to_restart}" successfully restarted. Time: {current_time}')
 
 				else: 
-					click.echo('You can only have a maximum of 3 running tasks at any time. Please Pause or End existing running Tasks.')
+					custom_print_red('You can only have a maximum of 3 running tasks at any time. Please Pause or End existing running Tasks.')
 
 			else:
-				click.echo('The Task has ended. Please create a new Task.')
+				custom_print_red('The Task has ended. Please create a new Task.')
 		else:
-			click.echo('That Task does not exist or is not Paused, please try again.')
+			custom_print_red('That Task does not exist or is not Paused, please try again.')
 
 	elif user_input == 'update_task_name':
 
@@ -365,7 +379,7 @@ while 1:
 			completer = task_command_completer,
 			wrap_lines=False,
 			complete_while_typing=True,
-			default = task_to_update_name
+			default = task_to_update_name.split(' - ')[0]
 		).split(' - ')[0]
 
 		task_list = select_column(task_table.all(), 'task_name')
@@ -379,11 +393,11 @@ while 1:
 			if name_to_update_to not in existing_task_names:
 
 				task_table.update({'task_name': name_to_update_to, 'paused': False}, (where('task_name') == task_to_update_name) & (where('project_name') == current_task_project))
-				click.echo(f'Task "{task_to_update_name}" has been updated to "{name_to_update_to}"')
+				custom_print_green(f'Task "{task_to_update_name}" has been updated to "{name_to_update_to}"')
 			else:
-				click.echo(f'The Task name {name_to_update_to} already exists for the project {current_task_project}. Please choose a different Task name.')			
+				custom_print_red(f'The Task name {name_to_update_to} already exists for the project {current_task_project}. Please choose a different Task name.')			
 		else:
-			click.echo('That Task does not exist, please try again.')		
+			custom_print_red('That Task does not exist, please try again.')		
 
 	elif user_input == 'export_completed_tasks':
 
@@ -395,9 +409,9 @@ while 1:
 
 		if len(completed_tasks) > 0:
 			to_csv(completed_tasks, name)
-			click.echo('Completed Tasks exported.')
+			custom_print_green('Completed Tasks exported.')
 		else:
-			click.echo('There were not completed Tasks to export.')
+			custom_print_red('There were not completed Tasks to export.')
 
 	elif user_input == 'pause_all_tasks':
 		
@@ -429,10 +443,10 @@ while 1:
 				paused_duration = str(dt + diff)
 			
 				task_table.update({'duration': paused_duration, 'last_paused_date': current_time, 'paused': True}, (where('task_name') == task_to_pause) & (where('project_name') == current_task_project))
-				click.echo(f'Task: "{task_to_pause}" successfully paused. Time: {current_time}')
+				custom_print_green(f'Task: "{task_to_pause}" successfully paused. Time: {current_time}')
 
 		else:
-			click.echo('There are no running Tasks to Pause.')
+			custom_print_red('There are no running Tasks to Pause.')
 
 	elif user_input == 'delete_completed_tasks':
 		
@@ -450,9 +464,9 @@ while 1:
 
 				if len(completed_tasks) > 0:
 					to_csv(completed_tasks, name)
-					click.echo('Completed Tasks exported.')
+					custom_print_green('Completed Tasks exported.')
 				else:
-					click.echo('There were not completed Tasks to export.')
+					custom_print_red('There were not completed Tasks to export.')
 
 
 				for task_to_delete in task_list:
@@ -461,22 +475,22 @@ while 1:
 					task_to_delete = task_to_delete.split(' - ')[0]
 			
 					task_table.remove((where('task_name') == task_to_delete) & (where('project_name') == current_task_project) )
-					click.echo(f'Task: "{task_to_delete}" successfully deleted.')
+					custom_print_green(f'Task: "{task_to_delete}" successfully deleted.')
 
 
 			elif confirm == 'n':
 
-				click.echo('Deletion cancelled.')
+				custom_print_red('Deletion cancelled.')
 
 			else:
 
-				click.echo('Did not understand answer to confirmation. Please try again.')
+				custom_print_red('Did not understand answer to confirmation. Please try again.')
 		else:
 
-			click.echo('There are no completed tasks to remove.')
+			custom_print_red('There are no completed tasks to remove.')
 
 	else:
-		click.echo('Not a valid command. Press TAB to view list of possible commands. \n')
+		custom_print_red('Not a valid command. Press TAB to view list of possible commands.')
 
 
 # task_table.purge()
