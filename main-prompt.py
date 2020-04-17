@@ -10,6 +10,7 @@ import time
 from tinydb import TinyDB, Query, where
 from tinydb.operations import delete
 from prettytable import PrettyTable
+import csv
 
 db = TinyDB('db.json')
 task_table = db.table('tasks')
@@ -17,10 +18,14 @@ project_table = db.table('projects')
 
 project_list = []
 format_str = "%A, %d %b %Y %I:%M:%S %p"
+filename_format = '%Y-%m-%d %I%M-%p'
 task_table_columns = ["Task Name", "Project Name", "Start Date", "End Date", "Last Restart Date", "Last Paused Date", "Paused", "Duration"]
+command_list = ['add_task', 'delete_task', 'end_task', 'pending_tasks', 'all_tasks', 
+	'pause_task', 'restart_task', 'update_task_name', 'exit', 'export_completed_tasks']
+sorted_commands = sorted(command_list, key=str.lower)
 
-def get_timestamp():
-    result = datetime.now().strftime(format_str)
+def get_timestamp(format = format_str):
+    result = datetime.now().strftime(format)
     return result
 
 def select_column(input_list, column1, column2=''):
@@ -35,15 +40,13 @@ def select_column(input_list, column1, column2=''):
 			out.append(row)
 		return(out)
 		
-		
-
-
 command_completer = WordCompleter(
-	['add_task', 'delete_task', 'end_task', 'list_pending_tasks', 'list_all_tasks', 
-	'pause_task', 'restart_task', 'update_task_name', 'exported_completed_tasks', 'exit'], 
+	sorted_commands, 
 	ignore_case=True)
 
+click.echo('Welcome to Tasker, press TAB to see the list of commands.')
 while 1:
+
 
 	user_input = prompt(
 		'tasker > ',
@@ -171,7 +174,7 @@ while 1:
 
 			click.echo('Did not understand answer to confirmation. Please try again.')
 	
-	elif user_input == 'list_pending_tasks':
+	elif user_input == 'pending_tasks':
 		pending_tasks =  task_table.search(where('end_date') == '')
 
 		click.echo('\n')
@@ -180,7 +183,7 @@ while 1:
 			x.add_row(task.values())
 		click.echo(x)
 	
-	elif user_input == 'list_all_tasks':
+	elif user_input == 'all_tasks':
 		all_tasks =  task_table.all()
 
 		click.echo('\n')
@@ -288,6 +291,28 @@ while 1:
 				click.echo(f'The Task name {name_to_update_to} already exists for the project {current_task_project}. Please choose a different Task name.')			
 		else:
 			click.echo('That Task does not exist, please try again.')		
+
+	elif user_input == 'export_completed_tasks':
+
+		completed_tasks =  task_table.search(where('end_date') != '')
+
+		click.echo('\n')
+		x = PrettyTable(task_table_columns)
+		for task in completed_tasks:
+			x.add_row(task.values())
+		click.echo(x)
+
+		current_time = get_timestamp(filename_format)
+
+		data_list = completed_tasks
+
+		keys = data_list[0].keys()
+		with open(f'Completed Tasks as of {current_time}.csv', 'a', newline='') as output_file:
+			dict_writer = csv.DictWriter(output_file, keys)
+			dict_writer.writeheader()
+			dict_writer.writerows(data_list)
+
+		click.echo('Completed tasks exported. \n')
 
 	else:
 		click.echo('Not a valid command. Press TAB to view list of possible commands. \n')
