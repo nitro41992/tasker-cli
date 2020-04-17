@@ -103,7 +103,7 @@ while 1:
 
 		if task_to_end in task_list:
 			task_table.update({'end_date': task_end_time, 'duration': diff}, (where('task_name') == task_to_end) & (where('project_name') == current_task_project))
-			click.echo(f'Task: "{task_to_end}" successfully completed.')
+			click.echo(f'Task: "{task_to_end}" successfully completed. Time: {task_end_time}')
 		else:
 			click.echo('That Task does not exist, please try again.')
 	
@@ -118,20 +118,29 @@ while 1:
 			completer = task_command_completer,
 		)
 
-		task_end_time = get_timestamp()
+		confirm =  task_session.prompt(
+			f'Are you sure you want to delete "{task_to_delete}" (y/n): ',
+		)
 
-		diff = 0
-	
-		try:
-			current_task_project = select_column(task_table.search(where('task_name') == task_to_delete), 'project_name')[0]
-		except:
-			pass
+		if confirm == 'y':
+			task_end_time = get_timestamp()
 
-		if task_to_delete in task_list:
-			task_table.remove((where('task_name') == task_to_delete) & (where('project_name') == current_task_project) )
-			click.echo(f'Task: "{task_to_delete}" successfully deleted.')
+			diff = 0
+		
+			try:
+				current_task_project = select_column(task_table.search(where('task_name') == task_to_delete), 'project_name')[0]
+			except:
+				pass
+
+			if task_to_delete in task_list:
+				task_table.remove((where('task_name') == task_to_delete) & (where('project_name') == current_task_project) )
+				click.echo(f'Task: "{task_to_delete}" successfully deleted.')
+			else:
+				click.echo('That Task does not exist, please try again.')
+		elif confirm == 'n':
+			click.echo('Deletion cancelled.')
 		else:
-			click.echo('That Task does not exist, please try again.')
+			click.echo('Did not understand answer to confirmation. Please try again.')
 	
 	elif user_input == 'list_pending_tasks':
 		pending_tasks =  task_table.search(where('end_date') == '')
