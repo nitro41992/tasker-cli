@@ -8,6 +8,7 @@ import os
 from datetime import datetime
 import time
 from tinydb import TinyDB, Query, where
+from prettytable import PrettyTable
 
 db = TinyDB('db.json')
 task_table = db.table('tasks')
@@ -67,7 +68,7 @@ while 1:
 		if task_project not in project_list:
 			project_table.insert({'project_name': task_project, 'created_on': start_time})
 
-		print(f'Task: "{task_name}" successfully started. Time: {start_time}')
+		click.echo(f'Task: "{task_name}" successfully started. Time: {start_time}')
 
 	elif user_input == 'end_task':
 
@@ -99,8 +100,33 @@ while 1:
 
 		if task_to_end in task_list:
 			task_table.update({'end_date': task_end_time, 'duration': diff}, (where('task_name') == task_to_end) & (where('project_name') == current_task_project))
+			click.echo(f'Task: "{task_to_end}" successfully completed.')
 		else:
 			click.echo('That Task does not exist, please try again.')
+	
+	elif user_input == 'delete_task':
+		pass
+	
+	elif user_input == 'list_pending_tasks':
+		pending_tasks =  task_table.search(where('end_date') == '')
+
+		click.echo('\n')
+		x = PrettyTable(["Task Name", "Project Name", "Start Date", "End Date", "Duration"])
+		for task in pending_tasks:
+			x.add_row(task.values())
+		click.echo(x)
+	
+	elif user_input == 'list_all_tasks':
+		all_tasks =  task_table.all()
+
+		click.echo('\n')
+		x = PrettyTable(["Task Name", "Project Name", "Start Date", "End Date", "Duration"])
+		for task in all_tasks:
+			x.add_row(task.values())
+		click.echo(x)
+
+	elif user_input == 'restart_task':
+		pass
 	
 	else:
 		click.echo('Not a valid command. Please try another command. Press TAB to view list of possible commands')
@@ -108,5 +134,5 @@ while 1:
 
 
 
-task_table.purge()
+# task_table.purge()
 project_table.purge()
