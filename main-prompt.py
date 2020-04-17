@@ -20,7 +20,7 @@ project_list = []
 format_str = "%A, %d %b %Y %I:%M:%S %p"
 filename_format = '%Y-%m-%d %I%M-%p'
 task_table_columns = ["Task Name", "Project Name", "Start Date", "End Date", "Last Restart Date", "Last Paused Date", "Paused", "Duration"]
-command_list = ['add_task', 'delete_task', 'end_task', 'pending_tasks', 'all_tasks', 
+command_list = ['add_task', 'delete_task', 'end_task', 'pending_tasks', 'task_list', 
 	'pause_task', 'restart_task', 'update_task_name', 'exit', 'export_completed_tasks']
 sorted_commands = sorted(command_list, key=str.lower)
 
@@ -183,7 +183,7 @@ while 1:
 			x.add_row(task.values())
 		click.echo(x)
 	
-	elif user_input == 'all_tasks':
+	elif user_input == 'task_list':
 		all_tasks =  task_table.all()
 
 		click.echo('\n')
