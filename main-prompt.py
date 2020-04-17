@@ -67,32 +67,38 @@ while 1:
 		if task_project not in project_list:
 			project_table.insert({'project_name': task_project, 'created_on': start_time})
 
-		print(f'Task: {task_name} successfully Started. Time: {start_time}')
+		print(f'Task: "{task_name}" successfully started. Time: {start_time}')
 
 	elif user_input == 'end_task':
 
-		task_list = select_column(task_table.all(), 'task_name')
+		task_list = select_column(task_table.search(where('end_date') == ''), 'task_name')
 		task_command_completer = WordCompleter(task_list, ignore_case=True)
 
 		task_session = PromptSession()
 
 		task_to_end = task_session.prompt(
-			'Select Task to End: ',
+			'Select Started Task to End: ',
 			completer = task_command_completer,
 		)
 
 		task_end_time = get_timestamp()
 
-		task_start_time = select_column(task_table.search(where('task_name') == task_to_end), 'start_date')[0]
-		current_task_project = select_column(task_table.search(where('task_name') == task_to_end), 'project_name')[0]
+		diff = 0
+	
+		try:
+			current_start_time = select_column(task_table.search(where('task_name') == task_to_end), 'start_date')[0]
+			current_task_project = select_column(task_table.search(where('task_name') == task_to_end), 'project_name')[0]
 
-		formatted_end_date = datetime.strptime(task_end_time, format_str)
-		formatted_start_date = datetime.strptime(task_start_time, format_str)
+			formatted_end_date = datetime.strptime(task_end_time, format_str)
+			formatted_start_date = datetime.strptime(current_start_time, format_str)
+		
 
-		diff = formatted_end_date - formatted_start_date
+			diff = str(formatted_end_date - formatted_start_date)
+		except:
+			pass
 
 		if task_to_end in task_list:
-			task_table.update({'end_date': task_end_time, 'duration': diff}, where('task_name') == task_to_end & where('project_name') == current_task_project)
+			task_table.update({'end_date': task_end_time, 'duration': diff}, (where('task_name') == task_to_end) & (where('project_name') == current_task_project))
 		else:
 			click.echo('That Task does not exist, please try again.')
 	
@@ -102,5 +108,5 @@ while 1:
 
 
 
-# task_table.purge()
-# project_table.purge()
+task_table.purge()
+project_table.purge()
