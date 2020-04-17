@@ -1,6 +1,5 @@
 from prompt_toolkit import prompt
 from prompt_toolkit.history import FileHistory
-from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit import PromptSession
 import click
@@ -45,10 +44,7 @@ def select_column(input_list, column1, column2=''):
 
 def to_csv(data_list, name):
 
-	x = PrettyTable(task_table_columns)
-	for task in data_list:
-		x.add_row(task.values())
-	click.echo(x)
+	output_task_table(data_list, task_table_columns)
 
 	current_time = get_timestamp(filename_format)
 
@@ -94,10 +90,9 @@ while 1:
 
 	user_input = prompt(
 		'tasker > ',
-		history=FileHistory('history.txt'),
-		auto_suggest=AutoSuggestFromHistory(),
 		completer=command_completer,
-		wrap_lines=False)
+		wrap_lines=False,
+		complete_while_typing=True)
 
 	if user_input == 'exit':
 
@@ -121,7 +116,8 @@ while 1:
 		task_project = task_session.prompt(
 			'Project: ',
 			completer=project_command_completer,
-			wrap_lines=False
+			wrap_lines=False,
+			complete_while_typing=True
 		)
 
 		start_time = get_timestamp()
@@ -157,7 +153,8 @@ while 1:
 		task_project = task_session.prompt(
 			'Project: ',
 			completer=project_command_completer,
-			wrap_lines=False
+			wrap_lines=False,
+			complete_while_typing=True
 		)
 
 
@@ -181,7 +178,8 @@ while 1:
 		task_command_completer = WordCompleter(task_list, ignore_case=True)
 
 		task_session = PromptSession()
-		task_to_end = task_session.prompt('Select Started Task to End: ', completer = task_command_completer, wrap_lines=False)
+		task_to_end = task_session.prompt('Select Started Task to End: ', completer = task_command_completer, wrap_lines=False,
+		complete_while_typing=True)
 		
 		if task_to_end in task_list:
 
@@ -232,7 +230,8 @@ while 1:
 		task_to_delete = task_session.prompt(
 			'Select Task to Delete: ',
 			completer = task_command_completer,
-			wrap_lines=False
+			wrap_lines=False,
+			complete_while_typing=True
 		)
 
 		task_list = select_column(task_table.all(), 'task_name')
@@ -278,7 +277,8 @@ while 1:
 		task_to_pause = task_session.prompt(
 			'Select Started Task to Pause: ',
 			completer = task_command_completer,
-			wrap_lines=False
+			wrap_lines=False,
+			complete_while_typing=True
 		)
 
 		current_time = get_timestamp()
@@ -319,7 +319,8 @@ while 1:
 		task_to_restart = task_session.prompt(
 			'Select Paused Task to Restart: ',
 			completer = task_command_completer,
-			wrap_lines=False
+			wrap_lines=False,
+			complete_while_typing=True
 		)
 
 		current_task_project = task_to_restart.split(' - ')[1]
@@ -355,13 +356,15 @@ while 1:
 		task_to_update_name = task_session.prompt(
 			'Select Task to Update: ',
 			completer = task_command_completer,
-			wrap_lines=False
+			wrap_lines=False,
+			complete_while_typing=True
 		)
 
 		name_to_update_to = task_session.prompt(
 			'Update the Task Name: ',
 			completer = task_command_completer,
 			wrap_lines=False,
+			complete_while_typing=True,
 			default = task_to_update_name
 		).split(' - ')[0]
 
