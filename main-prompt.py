@@ -8,6 +8,7 @@ import os
 from datetime import datetime
 import time
 from tinydb import TinyDB, Query, where
+from tinydb.operations import delete
 from prettytable import PrettyTable
 
 db = TinyDB('db.json')
@@ -25,8 +26,10 @@ def select_column(list, column):
 	return [dict_row[column] for dict_row in list]
 
 
-command_completer = WordCompleter(['add_task', 'delete_task', 'end_task', 'list_pending_tasks', 'list_all_tasks', 'restart_task', 'exit'], 
-ignore_case=True)
+command_completer = WordCompleter(
+	['add_task', 'delete_task', 'end_task', 'list_pending_tasks', 'list_all_tasks', 
+	'pause_task', 'pause_all_tasks', 'restart_task', 'update_project_name', 'exit'], 
+	ignore_case=True)
 
 while 1:
 
@@ -105,7 +108,30 @@ while 1:
 			click.echo('That Task does not exist, please try again.')
 	
 	elif user_input == 'delete_task':
-		pass
+		task_list = select_column(task_table.all(), 'task_name')
+		task_command_completer = WordCompleter(task_list, ignore_case=True)
+
+		task_session = PromptSession()
+
+		task_to_delete = task_session.prompt(
+			'Select Started Task to Delete: ',
+			completer = task_command_completer,
+		)
+
+		task_end_time = get_timestamp()
+
+		diff = 0
+	
+		try:
+			current_task_project = select_column(task_table.search(where('task_name') == task_to_delete), 'project_name')[0]
+		except:
+			pass
+
+		if task_to_delete in task_list:
+			task_table.remove((where('task_name') == task_to_delete) & (where('project_name') == current_task_project) )
+			click.echo(f'Task: "{task_to_delete}" successfully deleted.')
+		else:
+			click.echo('That Task does not exist, please try again.')
 	
 	elif user_input == 'list_pending_tasks':
 		pending_tasks =  task_table.search(where('end_date') == '')
@@ -127,9 +153,15 @@ while 1:
 
 	elif user_input == 'restart_task':
 		pass
+
+	elif user_input == 'pause_task':
+		pass
+
+	elif user_input == 'pause_all_tasks':
+		pass
 	
 	else:
-		click.echo('Not a valid command. Please try another command. Press TAB to view list of possible commands')
+		click.echo('Not a valid command. Press TAB to view list of possible commands. \n')
 
 
 
