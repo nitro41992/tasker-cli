@@ -96,7 +96,8 @@ while 1:
 		'tasker > ',
 		history=FileHistory('history.txt'),
 		auto_suggest=AutoSuggestFromHistory(),
-		completer=command_completer)
+		completer=command_completer,
+		wrap_lines=False)
 
 	if user_input == 'exit':
 
@@ -119,7 +120,8 @@ while 1:
 		
 		task_project = task_session.prompt(
 			'Project: ',
-			completer=project_command_completer
+			completer=project_command_completer,
+			wrap_lines=False
 		)
 
 		start_time = get_timestamp()
@@ -154,7 +156,8 @@ while 1:
 		
 		task_project = task_session.prompt(
 			'Project: ',
-			completer=project_command_completer
+			completer=project_command_completer,
+			wrap_lines=False
 		)
 
 
@@ -178,7 +181,7 @@ while 1:
 		task_command_completer = WordCompleter(task_list, ignore_case=True)
 
 		task_session = PromptSession()
-		task_to_end = task_session.prompt('Select Started Task to End: ', completer = task_command_completer)
+		task_to_end = task_session.prompt('Select Started Task to End: ', completer = task_command_completer, wrap_lines=False)
 		
 		if task_to_end in task_list:
 
@@ -209,10 +212,13 @@ while 1:
 			if task_to_end not in paused_tasks:
 				task_table.update({'duration': total_duration, 'end_date': current_time, 'paused': False}, (where('task_name') == task_to_end) & (where('project_name') == current_task_project))
 				click.echo(f'Task: "{task_to_end}" successfully ended. Time: {current_time}')
-
 			else:
-				task_table.update({'end_date': current_time, 'paused': False}, (where('task_name') == task_to_end) & (where('project_name') == current_task_project))
-				click.echo(f'Task: "{task_to_end}" successfully ended. Time: {current_time}')
+				if current_duration != '0 days, 0:00:00':
+					task_table.update({'end_date': current_time, 'paused': False}, (where('task_name') == task_to_end) & (where('project_name') == current_task_project))
+					click.echo(f'Task: "{task_to_end}" successfully ended. Time: {current_time}')
+				else:
+					click.echo('Cannot end Task because it is paused and the duration is 0 days, 0:00:00')
+
 
 		else:
 			click.echo('That Task does not exist or has ended, please try again.')
@@ -226,6 +232,7 @@ while 1:
 		task_to_delete = task_session.prompt(
 			'Select Task to Delete: ',
 			completer = task_command_completer,
+			wrap_lines=False
 		)
 
 		task_list = select_column(task_table.all(), 'task_name')
@@ -256,7 +263,6 @@ while 1:
 	
 	elif user_input == 'list_tasks':
 		all_tasks =  task_table.all()
-		print(all_tasks)
 		if len(all_tasks) > 0:
 			output_task_table(all_tasks, task_table_columns)
 		else:
@@ -272,6 +278,7 @@ while 1:
 		task_to_pause = task_session.prompt(
 			'Select Started Task to Pause: ',
 			completer = task_command_completer,
+			wrap_lines=False
 		)
 
 		current_time = get_timestamp()
@@ -312,6 +319,7 @@ while 1:
 		task_to_restart = task_session.prompt(
 			'Select Paused Task to Restart: ',
 			completer = task_command_completer,
+			wrap_lines=False
 		)
 
 		current_task_project = task_to_restart.split(' - ')[1]
@@ -347,11 +355,13 @@ while 1:
 		task_to_update_name = task_session.prompt(
 			'Select Task to Update: ',
 			completer = task_command_completer,
+			wrap_lines=False
 		)
 
 		name_to_update_to = task_session.prompt(
 			'Update the Task Name: ',
 			completer = task_command_completer,
+			wrap_lines=False,
 			default = task_to_update_name
 		).split(' - ')[0]
 
