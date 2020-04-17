@@ -134,7 +134,7 @@ while 1:
 
 		if task_name not in existing_task_names:
 			task_table.insert({'task_name': task_name, 'project_name': task_project, 'start_date': start_time, 'end_date': '',
-			'last_restart_date': '', 'last_paused_date': start_time, 'paused': True, 'duration': '0 days, 0:00:00'})
+			'last_restart_date': start_time, 'last_paused_date': start_time, 'paused': True, 'duration': '0 days, 0:00:00'})
 
 			if task_project not in project_list:
 				project_table.insert({'project_name': task_project, 'created_on': start_time})
@@ -220,20 +220,26 @@ while 1:
 	elif user_input == 'list_pending_tasks':
 		pending_tasks =  task_table.search(where('end_date') == '')
 
-		click.echo('\n')
-		x = PrettyTable(task_table_columns)
-		for task in pending_tasks:
-			x.add_row(task.values())
-		click.echo(x)
+		if len(pending_tasks) > 0:
+			click.echo('\n')
+			x = PrettyTable(task_table_columns)
+			for task in pending_tasks:
+				x.add_row(task.values())
+			click.echo(x)
+		else:
+			click.echo('There are no pending Tasks.')
 	
 	elif user_input == 'list_tasks':
 		all_tasks =  task_table.all()
 
-		click.echo('\n')
-		x = PrettyTable(task_table_columns)
-		for task in all_tasks:
-			x.add_row(task.values())
-		click.echo(x)
+		if len(all_tasks) > 0:
+			click.echo('\n')
+			x = PrettyTable(task_table_columns)
+			for task in all_tasks:
+				x.add_row(task.values())
+			click.echo(x)
+		else:
+			click.echo('No Tasks have been added yet.')
 
 	elif user_input == 'pause_task':
 		
@@ -399,36 +405,42 @@ while 1:
 		task_list = select_column(task_table.search((where('end_date') != '') & (where('paused') == False)), 'task_name', 'project_name')
 		completed_tasks =  task_table.search(where('end_date') != '')
 
-		task_session = PromptSession()
-		confirm =  task_session.prompt(f'Are you sure you want to delete all tasks? You will be forced to export before deleting. (y/n): ')
+		if len(task_list) > 0:
 
-		if confirm == 'y':
+			task_session = PromptSession()
+			confirm =  task_session.prompt(f'Are you sure you want to delete all tasks? You will be forced to export before deleting. (y/n): ')
 
-			name = task_session.prompt('Your Name (Please be consistent with previous exports): ')
+			if confirm == 'y':
 
-			if len(completed_tasks) > 0:
-				to_csv(completed_tasks, name)
-				click.echo('Completed Tasks exported.')
+				name = task_session.prompt('Your Name (Please be consistent with previous exports): ')
+
+				if len(completed_tasks) > 0:
+					to_csv(completed_tasks, name)
+					click.echo('Completed Tasks exported.')
+				else:
+					click.echo('There were not completed Tasks to export.')
+
+
+				for task_to_delete in task_list:
+
+					current_task_project = task_to_delete.split(' - ')[1]
+					task_to_delete = task_to_delete.split(' - ')[0]
+			
+					task_table.remove((where('task_name') == task_to_delete) & (where('project_name') == current_task_project) )
+					click.echo(f'Task: "{task_to_delete}" successfully deleted.')
+
+
+			elif confirm == 'n':
+
+				click.echo('Deletion cancelled.')
+
 			else:
-				click.echo('There were not completed Tasks to export.')
 
-
-			for task_to_delete in task_list:
-
-				current_task_project = task_to_delete.split(' - ')[1]
-				task_to_delete = task_to_delete.split(' - ')[0]
-		
-				task_table.remove((where('task_name') == task_to_delete) & (where('project_name') == current_task_project) )
-				click.echo(f'Task: "{task_to_delete}" successfully deleted.')
-
-
-		elif confirm == 'n':
-
-			click.echo('Deletion cancelled.')
-
+				click.echo('Did not understand answer to confirmation. Please try again.')
 		else:
 
-			click.echo('Did not understand answer to confirmation. Please try again.')
+			click.echo('There are no completed tasks to remove.')
+
 
 	else:
 		click.echo('Not a valid command. Press TAB to view list of possible commands. \n')
