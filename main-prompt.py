@@ -23,8 +23,19 @@ def get_timestamp():
     result = datetime.now().strftime(format_str)
     return result
 
-def select_column(list, column):
-	return [dict_row[column] for dict_row in list]
+def select_column(input_list, column1, column2=''):
+	if column2 == '':
+		return [dict_row[column1] for dict_row in input_list]
+	elif column2 != '':
+		out = []
+		for dict_row in input_list:
+			c1 = dict_row[column1]
+			c2 = dict_row[column2]
+			row = f'{c1} - {c2}'
+			out.append(row)
+		return(out)
+		
+		
 
 
 command_completer = WordCompleter(
@@ -237,7 +248,7 @@ while 1:
 
 	elif user_input == 'update_task_name':
 
-		task_list = select_column(task_table.all(), 'task_name')
+		task_list = select_column(task_table.all(), 'task_name', 'project_name')
 		task_command_completer = WordCompleter(task_list, ignore_case=True)
 
 		task_session = PromptSession()
@@ -245,20 +256,24 @@ while 1:
 		task_to_update_name = task_session.prompt(
 			'Select Task to Update: ',
 			completer = task_command_completer,
-		)
+		).split(' - ')[0]
 
 		name_to_update_to = task_session.prompt(
 			'Update the Task Name: ',
 			completer = task_command_completer,
-			default= task_to_update_name
-		)
+			default = task_to_update_name
+		).split(' - ')[0]
 
-		if task_to_update_name in task_list:
-
+		if task_to_update_name in select_column(task_table.all(), 'task_name'):
 			current_task_project = select_column(task_table.search(where('task_name') == task_to_update_name), 'project_name')[0]
-			task_table.update({'task_name': name_to_update_to, 'paused': False}, (where('task_name') == task_to_update_name) & (where('project_name') == current_task_project))
-			click.echo(f'Task "{task_to_update_name}" has been updated to "{name_to_update_to}"')	
-				
+			existing_task_names = select_column(task_table.search(where('project_name') == current_task_project), 'task_name')
+		
+			if name_to_update_to not in existing_task_names:
+
+				task_table.update({'task_name': name_to_update_to, 'paused': False}, (where('task_name') == task_to_update_name) & (where('project_name') == current_task_project))
+				click.echo(f'Task "{task_to_update_name}" has been updated to "{name_to_update_to}"')
+			else:
+				click.echo(f'The Task name {name_to_update_to} already exists for the project {current_task_project}. Please choose a different Task name.')			
 		else:
 			click.echo('That Task does not exist, please try again.')		
 
