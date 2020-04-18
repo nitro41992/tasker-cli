@@ -1,25 +1,23 @@
-from prompt_toolkit import prompt
-from prompt_toolkit.history import FileHistory
-from prompt_toolkit.completion import WordCompleter
-from prompt_toolkit import PromptSession
-import click
-import os
-from datetime import datetime, timedelta
-import time
-from tinydb import TinyDB, Query, where
-from tinydb.operations import delete
-from prettytable import PrettyTable
-from prettytable import ALL as ALL
 import csv
-from pyfiglet import Figlet
-from colorama import init
-from colorama import Fore
-from prompt_toolkit.formatted_text import FormattedText
-from prompt_toolkit.styles import Style
+import os
+import time
+from datetime import datetime, timedelta
 
+from click import echo
+from colorama import Fore, init
+from prettytable import ALL as ALL
+from prettytable import PrettyTable
+from prompt_toolkit import PromptSession, prompt
+from prompt_toolkit.completion import WordCompleter
+from prompt_toolkit.formatted_text import FormattedText
+from prompt_toolkit.history import FileHistory
+from prompt_toolkit.styles import Style
+from pyfiglet import Figlet
+from tinydb import Query, TinyDB, where
+from tinydb.operations import delete
 
 prompt_symbol = FormattedText([
-    ('gold bold', 'tasker > ')
+    ('gold bold', '<< tasker >> ')
 ])
 
 db = TinyDB('db.json')
@@ -114,16 +112,16 @@ def output_task_table(dict_list, columns):
 			if type(task[column]) != bool:
 				task[column] = format_column_value(task[column], max_line_length)
 		cli_table.add_row([task['task_name'], task['project_name'], task['start_date'], task['end_date'], task['paused'], task['duration']])
-	click.echo(cli_table)
+	echo(cli_table)
 
 def custom_print_green(value):
-	return(click.echo(Fore.GREEN + value))
+	return(echo(Fore.GREEN + value))
 
 def custom_print_blue(value):
-	return(click.echo(Fore.BLUE + value))
+	return(echo(Fore.BLUE + value))
 
 def custom_print_red(value):
-	return(click.echo(Fore.RED + value))
+	return(echo(Fore.RED + value))
 
 command_completer = WordCompleter(
 	sorted_commands, 
@@ -134,11 +132,7 @@ custom_print_green('Press TAB to see the list of commands.')
 
 while 1:
 
-	user_input = prompt(
-		prompt_symbol,
-		completer=command_completer,
-		wrap_lines=False,
-		complete_while_typing=True)
+	user_input = prompt(prompt_symbol, completer=command_completer, wrap_lines=False, complete_while_typing=True)
 
 	if user_input == 'exit':
 
@@ -438,9 +432,8 @@ while 1:
 
 		task_session = PromptSession()
 
-		name = task_session.prompt('Your Name (Please be consistent with previous exports): ')
-
 		if len(completed_tasks) > 0:
+			name = task_session.prompt('Your Name (Please be consistent with previous exports): ')
 			to_csv(completed_tasks, name)
 			custom_print_green('Completed Tasks exported.')
 		else:
@@ -524,7 +517,3 @@ while 1:
 
 	else:
 		custom_print_red('Not a valid command. Press TAB to view list of possible commands.')
-
-
-# task_table.purge()
-# project_table.purge()
