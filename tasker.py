@@ -421,7 +421,7 @@ while 1:
 		
 			if name_to_update_to not in existing_task_names:
 
-				task_table.update({'task_name': name_to_update_to, 'paused': False}, (where('task_name') == task_to_update_name) & (where('project_name') == current_task_project))
+				task_table.update({'task_name': name_to_update_to}, (where('task_name') == task_to_update_name) & (where('project_name') == current_task_project))
 				custom_print_green(f'Task "{task_to_update_name}" has been updated to "{name_to_update_to}"')
 			else:
 				custom_print_red(f'The Task name {name_to_update_to} already exists for the project {current_task_project}. Please choose a different Task name.')			
