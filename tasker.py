@@ -27,7 +27,6 @@ db = TinyDB('db.json')
 task_table = db.table('tasks')
 project_table = db.table('projects')
 
-# f = Figlet(font='slant')
 
 number_of_concurrent_tasks = 3
 
