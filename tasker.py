@@ -23,13 +23,36 @@ project_table = db.table('projects')
 f = Figlet(font='slant')
 
 number_of_concurrent_tasks = 3
+
 max_line_length = 20
+
 project_list = []
+
 format_str = "%A, %d %b %Y %I:%M:%S %p"
+
 filename_format = '%Y-%m-%d %I%M-%p'
-task_table_columns = ["Task Name", "Project Name", "Start Date", "End Date", "Paused", "Duration"]
-command_list = ['add_running_task', 'add_paused_task', 'delete_task', 'end_task', 'list_pending_tasks', 'list_tasks', 
-	'pause_task', 'start_paused_task', 'update_task_name', 'exit', 'export_completed_tasks', 'pause_all_tasks', 'delete_completed_tasks']
+
+task_table_columns = ["Task Name", 
+					"Project Name", 
+					"Start Date", 
+					"End Date", 
+					"Paused", 
+					"Duration"]
+
+command_list = ['add_running_task', 
+				'add_paused_task', 
+				'delete_task', 
+				'end_task', 
+				'list_pending_tasks', 
+				'list_tasks', 
+				'pause_task', 
+				'start_paused_task', 
+				'update_task_name', 
+				'exit', 
+				'export_completed_tasks', 
+				'pause_all_tasks', 
+				'delete_completed_tasks']
+
 sorted_commands = sorted(command_list, key=str.lower)
 
 def get_timestamp(format = format_str):
@@ -100,13 +123,13 @@ command_completer = WordCompleter(
 	sorted_commands, 
 	ignore_case=True)
 
-custom_print_blue(f.renderText('tasker'))
+custom_print_blue(f.renderText('<< tasker >>'))
 custom_print_blue('Press TAB to see the list of commands.')
 
 while 1:
 
 	user_input = prompt(
-		'tasker >> ',
+		'tasker >',
 		completer=command_completer,
 		wrap_lines=False,
 		complete_while_typing=True)
