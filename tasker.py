@@ -15,10 +15,9 @@ from prompt_toolkit.styles import Style
 from pyfiglet import Figlet
 from tinydb import Query, TinyDB, where
 from tinydb.operations import delete
-# from PyInstaller.utils.hooks import collect_all
+from art import text2art
 
 
-# datas, binaries, hiddenimports = collect_all("pyfiglet")
 
 prompt_symbol = FormattedText([
     ('gold bold', '<< tasker >> ')
@@ -131,7 +130,7 @@ command_completer = WordCompleter(
 	sorted_commands, 
 	ignore_case=True)
 
-# custom_print_blue(f.renderText('<< tasker >>'))
+custom_print_blue(text2art('<< tasker >>'))
 custom_print_green('Press TAB to see the list of commands.')
 
 while 1:
