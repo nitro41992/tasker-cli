@@ -90,6 +90,9 @@ def output_task_table(dict_list, columns):
 def custom_print_green(value):
 	return(click.echo(Fore.GREEN + value))
 
+def custom_print_blue(value):
+	return(click.echo(Fore.BLUE + value))
+
 def custom_print_red(value):
 	return(click.echo(Fore.RED + value))
 
@@ -97,8 +100,8 @@ command_completer = WordCompleter(
 	sorted_commands, 
 	ignore_case=True)
 
-custom_print_green(f.renderText('tasker'))
-custom_print_green('Press TAB to see the list of commands.')
+custom_print_blue(f.renderText('tasker'))
+custom_print_blue('Press TAB to see the list of commands.')
 
 while 1:
 
@@ -247,7 +250,7 @@ while 1:
 			wrap_lines=False,
 			complete_while_typing=True
 		)
-		
+
 		if task_to_delete in task_list:
 
 			task_list = select_column(task_table.all(), 'task_name')
