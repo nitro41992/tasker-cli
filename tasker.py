@@ -14,7 +14,13 @@ import csv
 from pyfiglet import Figlet
 from colorama import init
 from colorama import Fore
+from prompt_toolkit.formatted_text import FormattedText
+from prompt_toolkit.styles import Style
 
+
+prompt_symbol = FormattedText([
+    ('gold bold', 'tasker > ')
+])
 
 db = TinyDB('db.json')
 task_table = db.table('tasks')
@@ -124,12 +130,12 @@ command_completer = WordCompleter(
 	ignore_case=True)
 
 custom_print_blue(f.renderText('<< tasker >>'))
-custom_print_blue('Press TAB to see the list of commands.')
+custom_print_green('Press TAB to see the list of commands.')
 
 while 1:
 
 	user_input = prompt(
-		'tasker > ',
+		prompt_symbol,
 		completer=command_completer,
 		wrap_lines=False,
 		complete_while_typing=True)
