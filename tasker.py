@@ -129,7 +129,7 @@ custom_print_blue('Press TAB to see the list of commands.')
 while 1:
 
 	user_input = prompt(
-		'tasker >',
+		'tasker > ',
 		completer=command_completer,
 		wrap_lines=False,
 		complete_while_typing=True)
