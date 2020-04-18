@@ -15,6 +15,10 @@ from prompt_toolkit.styles import Style
 from pyfiglet import Figlet
 from tinydb import Query, TinyDB, where
 from tinydb.operations import delete
+# from PyInstaller.utils.hooks import collect_all
+
+
+# datas, binaries, hiddenimports = collect_all("pyfiglet")
 
 prompt_symbol = FormattedText([
     ('gold bold', '<< tasker >> ')
@@ -24,7 +28,7 @@ db = TinyDB('db.json')
 task_table = db.table('tasks')
 project_table = db.table('projects')
 
-f = Figlet(font='slant')
+# f = Figlet(font='slant')
 
 number_of_concurrent_tasks = 3
 
@@ -127,7 +131,7 @@ command_completer = WordCompleter(
 	sorted_commands, 
 	ignore_case=True)
 
-custom_print_blue(f.renderText('<< tasker >>'))
+# custom_print_blue(f.renderText('<< tasker >>'))
 custom_print_green('Press TAB to see the list of commands.')
 
 while 1:
