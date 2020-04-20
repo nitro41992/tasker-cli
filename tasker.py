@@ -68,6 +68,25 @@ command_list = ['add_running_task',
 
 sorted_commands = sorted(command_list, key=str.lower)
 
+def get_running_duration(restart_datetime, current_duration):
+
+	current_time = get_timestamp()
+	
+	formatted_current_time = datetime.strptime(current_time, format_date_str)
+	formatted_start_date = datetime.strptime(restart_datetime, format_date_str)
+	
+	print(current_duration)
+	if 'days' in current_duration:
+		days_v_hms = current_duration.split('days')
+		hms = days_v_hms[1].split(':')
+	else:
+		hms = current_duration.split(':')
+
+	dt = timedelta(hours=int(hms[0]), minutes=int(hms[1]), seconds=float(hms[2]))
+
+	diff = formatted_current_time - formatted_start_date
+	return(str(dt + diff))
+
 def get_timestamp(format = format_date_str):
     result = datetime.now().strftime(format)
     return result
@@ -132,6 +151,8 @@ def output_task_table(dict_list, columns):
 			column = column.lower().replace(" ", "_")
 			if type(task[column]) != bool:
 				task[column] = format_column_value(task[column], max_line_length)
+		running_duration = get_running_duration(task['last_restart_date'], task['duration'])
+		task['duration'] = running_duration
 		cli_table.add_row([task['task_name'], task['project_name'], task['start_date'], task['end_date'], task['paused'], task['duration']])
 	echo(cli_table)
 
@@ -271,7 +292,7 @@ while 1:
 			formatted_start_date = datetime.strptime(current_start_time, format_date_str)
 
 			if 'days' in current_duration:
-				days_v_hms = current_duration.split('days,')
+				days_v_hms = current_duration.split('days')
 				hms = days_v_hms[1].split(':')
 			else:
 				hms = current_duration.split(':')
@@ -368,14 +389,14 @@ while 1:
 			task_to_pause = task_to_pause.split(' - ')[0]
 			task_list = select_column(task_table.search((where('end_date') == '') & (where('paused') == False)), 'task_name')
 
-			current_start_time = select_column(task_table.search(where('task_name') == task_to_pause), 'last_restart_date')[0]
-			current_duration = select_column(task_table.search(where('task_name') == task_to_pause), 'duration')[0]
+			current_start_time = select_column(task_table.search((where('task_name') == task_to_pause) & (where('project_name') == current_task_project)), 'last_restart_date')[0]
+			current_duration = select_column(task_table.search((where('task_name') == task_to_pause) & (where('project_name') == current_task_project)), 'duration')[0]
 
 			formatted_current_time = datetime.strptime(current_time, format_date_str)
 			formatted_start_date = datetime.strptime(current_start_time, format_date_str)
 			
 			if 'days' in current_duration:
-				days_v_hms = current_duration.split('days,')
+				days_v_hms = current_duration.split('days')
 				hms = days_v_hms[1].split(':')
 			else:
 				hms = current_duration.split(':')
@@ -499,7 +520,7 @@ while 1:
 				formatted_start_date = datetime.strptime(current_start_time, format_date_str)
 				
 				if 'days' in current_duration:
-					days_v_hms = current_duration.split('days,')
+					days_v_hms = current_duration.split('days')
 					hms = days_v_hms[1].split(':')
 				else:
 					hms = current_duration.split(':')
