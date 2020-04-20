@@ -12,7 +12,6 @@ from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.formatted_text import FormattedText
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.styles import Style
-from pyfiglet import Figlet
 from tinydb import Query, TinyDB, where
 from tinydb.operations import delete
 from art import text2art
@@ -265,7 +264,7 @@ while 1:
 			paused_tasks = select_column(task_table.search((where('paused') == True) & (where('project_name') == current_task_project)), 'task_name')
 
 			current_start_time = select_column(task_table.search(where('task_name') == task_to_end), 'last_restart_date')[0]
-			current_duration = select_column(task_table.search((where('task_name') == task_to_complete) & (where('project_name') == current_task_project)), 'duration')[0]
+			current_duration = select_column(task_table.search((where('task_name') == task_to_end) & (where('project_name') == current_task_project)), 'duration')[0]
 
 			formatted_current_time = datetime.strptime(current_time, format_date_str)
 			formatted_start_date = datetime.strptime(current_start_time, format_date_str)
