@@ -556,7 +556,7 @@ while 1:
 			current_duration = select_column(task_table.search((where('task_name') == task_to_complete) & (where('project_name') == current_task_project)), 'duration')[0]
 
 			if task_to_complete in paused_tasks:
-				
+
 				start_time = task_session.prompt('Do you want to update the start time? (Press ENTER for default) ', wrap_lines=False, default=str(start_time))
 				end_time = task_session.prompt('When was the Task completed? (Press ENTER for default) ', wrap_lines=False, default=str(current_time))
 				task_duration = task_session.prompt('How long did it take to complete? ', wrap_lines=False, default='0 days 0:00:00')
@@ -579,10 +579,9 @@ while 1:
 					custom_print_red(end_time_check)
 					custom_print_red(task_duration_check)
 			else:
-						custom_print_red('This Task is currently not paused. Please pause the task first to complete manually.')
+						custom_print_red('This Task is currently not paused. Please pause the Task first to complete manually.')
 		else:
 			custom_print_red('That Task does not exist or has been completed, please try again.')
-
 
 	else:
 		custom_print_red('Not a valid command. Press TAB to view list of possible commands.')
