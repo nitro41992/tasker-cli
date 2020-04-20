@@ -23,7 +23,9 @@ prompt_symbol = FormattedText([
     ('gold bold', '<< tasker >> ')
 ])
 
-db = TinyDB('db.json')
+dirname = os.path.dirname(__file__)
+datafile = os.path.join(dirname, 'db.json')
+db = TinyDB(datafile)
 task_table = db.table('tasks')
 project_table = db.table('projects')
 
@@ -34,8 +36,8 @@ max_line_length = 20
 
 project_list = []
 
-format_str = "%A, %d %b %Y %I:%M:%S %p"
-
+format_date_str = "%A, %d %b %Y %I:%M:%S %p"
+format_delta_str = "%d days %H:%M:%S"
 filename_format = '%Y-%m-%d %I%M-%p'
 
 task_table_columns = ["Task Name", 
@@ -57,13 +59,26 @@ command_list = ['add_running_task',
 				'exit', 
 				'export_completed_tasks', 
 				'pause_all_tasks', 
-				'delete_completed_tasks']
+				'delete_completed_tasks',
+				'complete_task_manually']
 
 sorted_commands = sorted(command_list, key=str.lower)
 
-def get_timestamp(format = format_str):
+def get_timestamp(format = format_date_str):
     result = datetime.now().strftime(format)
     return result
+
+def check_date_format(date_to_test):
+	try:
+		datetime.strptime(date_to_test,format_date_str)
+	except ValueError as err:
+		return(f'{date_to_test} is not the right format. The format should be {format_date_str}')
+
+def check_delta_format(delta_to_test):
+	try:
+		datetime.strptime(delta_to_test,format_delta_str)
+	except ValueError as err:
+		return(f'{delta_to_test} is not the right format. The format should be {delta_to_test}')
 
 def select_column(input_list, column1, column2=''):
 	if column2 == '':
@@ -170,7 +185,7 @@ while 1:
 
 			if len(running_tasks) < number_of_concurrent_tasks:
 				task_table.insert({'task_name': task_name, 'project_name': task_project, 'start_date': start_time, 'end_date': '',
-				'last_restart_date': start_time, 'last_paused_date': '', 'paused': False, 'duration': '0 days, 0:00:00'})
+				'last_restart_date': start_time, 'last_paused_date': '', 'paused': False, 'duration': '0 days 0:00:00'})
 				custom_print_green(f'Task: "{task_name}" successfully started. Time: {start_time}')
 
 				if task_project not in project_list:
@@ -205,7 +220,7 @@ while 1:
 
 		if task_name not in existing_task_names:
 			task_table.insert({'task_name': task_name, 'project_name': task_project, 'start_date': start_time, 'end_date': '',
-			'last_restart_date': start_time, 'last_paused_date': start_time, 'paused': True, 'duration': '0 days, 0:00:00'})
+			'last_restart_date': start_time, 'last_paused_date': start_time, 'paused': True, 'duration': '0 days 0:00:00'})
 
 			if task_project not in project_list:
 				project_table.insert({'project_name': task_project, 'created_on': start_time})
@@ -233,10 +248,10 @@ while 1:
 			paused_tasks = select_column(task_table.search((where('paused') == True) & (where('project_name') == current_task_project)), 'task_name')
 
 			current_start_time = select_column(task_table.search(where('task_name') == task_to_end), 'last_restart_date')[0]
-			current_duration = select_column(task_table.search(where('task_name') == task_to_end), 'duration')[0]
+			current_duration = select_column(task_table.search((where('task_name') == task_to_complete) & (where('project_name') == current_task_project)), 'duration')[0]
 
-			formatted_current_time = datetime.strptime(current_time, format_str)
-			formatted_start_date = datetime.strptime(current_start_time, format_str)
+			formatted_current_time = datetime.strptime(current_time, format_date_str)
+			formatted_start_date = datetime.strptime(current_start_time, format_date_str)
 
 			if 'days' in current_duration:
 				days_v_hms = current_duration.split('days,')
@@ -253,11 +268,11 @@ while 1:
 				task_table.update({'duration': total_duration, 'end_date': current_time, 'paused': False}, (where('task_name') == task_to_end) & (where('project_name') == current_task_project))
 				custom_print_green(f'Task: "{task_to_end}" successfully ended. Time: {current_time}')
 			else:
-				if current_duration != '0 days, 0:00:00':
+				if current_duration != '0 days 0:00:00':
 					task_table.update({'end_date': current_time, 'paused': False}, (where('task_name') == task_to_end) & (where('project_name') == current_task_project))
 					custom_print_green(f'Task: "{task_to_end}" successfully ended. Time: {current_time}')
 				else:
-					custom_print_red('Cannot end Task because it is paused and the duration is 0 days, 0:00:00')
+					custom_print_red('Cannot end Task because it is paused and the duration is 0 days 0:00:00')
 
 
 		else:
@@ -333,8 +348,8 @@ while 1:
 			current_start_time = select_column(task_table.search(where('task_name') == task_to_pause), 'last_restart_date')[0]
 			current_duration = select_column(task_table.search(where('task_name') == task_to_pause), 'duration')[0]
 
-			formatted_current_time = datetime.strptime(current_time, format_str)
-			formatted_start_date = datetime.strptime(current_start_time, format_str)
+			formatted_current_time = datetime.strptime(current_time, format_date_str)
+			formatted_start_date = datetime.strptime(current_start_time, format_date_str)
 			
 			if 'days' in current_duration:
 				days_v_hms = current_duration.split('days,')
@@ -456,8 +471,8 @@ while 1:
 				current_start_time = select_column(task_table.search(where('task_name') == task_to_pause), 'last_restart_date')[0]
 				current_duration = select_column(task_table.search(where('task_name') == task_to_pause), 'duration')[0]
 
-				formatted_current_time = datetime.strptime(current_time, format_str)
-				formatted_start_date = datetime.strptime(current_start_time, format_str)
+				formatted_current_time = datetime.strptime(current_time, format_date_str)
+				formatted_start_date = datetime.strptime(current_start_time, format_date_str)
 				
 				if 'days' in current_duration:
 					days_v_hms = current_duration.split('days,')
@@ -516,6 +531,55 @@ while 1:
 		else:
 
 			custom_print_red('There are no completed tasks to remove.')
+
+	elif user_input == 'complete_task_manually':
+
+		task_list = select_column(task_table.search(where('end_date') == ''), 'task_name', 'project_name')
+		task_command_completer = WordCompleter(task_list, ignore_case=True)
+
+		task_session = PromptSession()
+		task_to_complete = task_session.prompt('Select Started Task to Complete: ', 
+					completer = task_command_completer, 
+					wrap_lines=False, 
+					complete_while_typing=True)
+
+		current_time = get_timestamp()
+		
+		if task_to_complete in task_list:
+
+			current_task_project = task_to_complete.split(' - ')[1]
+			task_to_complete = task_to_complete.split(' - ')[0]
+
+			start_time = select_column(task_table.search((where('task_name') == task_to_complete) & (where('project_name') == current_task_project)), 'start_date')[0]
+			task_list = select_column(task_table.search(where('end_date') == ''), 'task_name')
+			paused_tasks = select_column(task_table.search((where('paused') == True) & (where('project_name') == current_task_project)), 'task_name')
+			current_duration = select_column(task_table.search((where('task_name') == task_to_complete) & (where('project_name') == current_task_project)), 'duration')[0]
+
+			start_time = task_session.prompt('Do you want to update the start time? (Press ENTER for default) ', wrap_lines=False, default=str(start_time))
+			end_time = task_session.prompt('When was the Task completed? (Press ENTER for default) ', wrap_lines=False, default=str(current_time))
+			task_duration = task_session.prompt('How long did it take to complete? ', wrap_lines=False, default='0 days 0:00:00')
+
+			start_time_check = check_date_format(start_time)
+			end_time_check = check_date_format(end_time)
+			task_duration_check = check_delta_format(task_duration)
+
+			if (start_time_check or end_time_check or task_duration_check != None):
+				if task_duration != '0 days 0:00:00':
+					if task_to_complete in paused_tasks:
+						task_table.update({'start_date': start_time,'duration': task_duration, 'end_date': end_time, 'paused': False}, (where('task_name') == task_to_complete) & (where('project_name') == current_task_project))
+						custom_print_green(f'Task: "{task_to_complete}" successfully completed. Time: {end_time}')
+					else:
+						custom_print_red('This Task is currently not paused. Please pause the task first to complete manually.')
+				else:
+					custom_print_red('The duration cannot be 0 days 0:00:00.')
+			else:
+				custom_print_red(start_time_check)
+				custom_print_red(end_time_check)
+				custom_print_red(task_duration_check)
+
+		else:
+			custom_print_red('That Task does not exist or has been completed, please try again.')
+
 
 	else:
 		custom_print_red('Not a valid command. Press TAB to view list of possible commands.')
