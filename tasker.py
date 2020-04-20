@@ -60,7 +60,8 @@ command_list = ['add_running_task',
 				'export_completed_tasks', 
 				'pause_all_tasks', 
 				'delete_completed_tasks',
-				'complete_task_manually']
+				'complete_task_manually',
+				'update_project_name']
 
 sorted_commands = sorted(command_list, key=str.lower)
 
@@ -582,6 +583,41 @@ while 1:
 						custom_print_red('This Task is currently not paused. Please pause the Task first to complete manually.')
 		else:
 			custom_print_red('That Task does not exist or has been completed, please try again.')
+	
+	elif user_input == 'update_project_name':
+
+		project_list = select_column(project_table.all(), 'project_name')
+		project_command_completer = WordCompleter(project_list, ignore_case=True)
+
+		task_session = PromptSession()
+
+		project_name_to_update = task_session.prompt(
+			'Select Project Name to Update: ',
+			completer = project_command_completer,
+			wrap_lines = False,
+			complete_while_typing=True
+		)
+
+		if project_name_to_update in project_list:
+
+			project_name_to_update_to = task_session.prompt(
+				'Update the Project Name: ',
+				completer = project_command_completer,
+				wrap_lines=False,
+				complete_while_typing=True,
+				default = project_name_to_update
+			)
+
+			task_list = select_column(task_table.search(where('project_name') == project_name_to_update), 'task_name')
+		
+			for task in task_list:
+				task_table.update({'project_name': project_name_to_update_to}, (where('task_name') == task) & (where('project_name') == project_name_to_update))
+				project_table.update({'project_name': project_name_to_update_to}, where('project_name') == project_name_to_update)
+			
+			custom_print_green(f'Project "{project_name_to_update}" has been successfully updated to "{project_name_to_update_to}"')		
+		else:
+			custom_print_red('That Project does not exist, please try again.')		
+
 
 	else:
 		custom_print_red('Not a valid command. Press TAB to view list of possible commands.')
