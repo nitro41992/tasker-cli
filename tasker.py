@@ -178,24 +178,27 @@ while 1:
 			complete_while_typing=True
 		)
 
-		start_time = get_timestamp()
-		existing_task_names = select_column(task_table.search(where('project_name') == task_project), 'task_name')
-		running_tasks = select_column(task_table.search((where('end_date') == '') & (where('paused') == False)), 'task_name')
+		if task_name or task_project is '':
+			custom_print_red('The Task and/or Project cannot be blank.')
+		else:	
+			start_time = get_timestamp()
+			existing_task_names = select_column(task_table.search(where('project_name') == task_project), 'task_name')
+			running_tasks = select_column(task_table.search((where('end_date') == '') & (where('paused') == False)), 'task_name')
 
-		if task_name not in existing_task_names:
+			if task_name not in existing_task_names:
 
-			if len(running_tasks) < number_of_concurrent_tasks:
-				task_table.insert({'task_name': task_name, 'project_name': task_project, 'start_date': start_time, 'end_date': '',
-				'last_restart_date': start_time, 'last_paused_date': '', 'paused': False, 'duration': '0 days 0:00:00'})
-				custom_print_green(f'Task: "{task_name}" successfully started. Time: {start_time}')
+				if len(running_tasks) < number_of_concurrent_tasks:
+					task_table.insert({'task_name': task_name, 'project_name': task_project, 'start_date': start_time, 'end_date': '',
+					'last_restart_date': start_time, 'last_paused_date': '', 'paused': False, 'duration': '0 days 0:00:00'})
+					custom_print_green(f'Task: "{task_name}" successfully started. Time: {start_time}')
 
-				if task_project not in project_list:
-					project_table.insert({'project_name': task_project, 'created_on': start_time})
+					if task_project not in project_list:
+						project_table.insert({'project_name': task_project, 'created_on': start_time})
 
-			else: 
-				custom_print_red('You can only have a maximum of 3 running tasks at any time. Please Pause or End existing running Tasks.')
-		else:
-			custom_print_red('That Task name already exists for that project. Please choose a different Task name')
+				else: 
+					custom_print_red('You can only have a maximum of 3 running tasks at any time. Please Pause or End existing running Tasks.')
+			else:
+				custom_print_red('That Task name already exists for that project. Please choose a different Task name')
 
 	elif user_input == 'add_paused_task':
 
@@ -215,20 +218,22 @@ while 1:
 			complete_while_typing=True
 		)
 
+		if task_name or task_project is '':
+			custom_print_red('The Task and/or Project cannot be blank.')
+		else:	
+			start_time = get_timestamp()
+			existing_task_names = select_column(task_table.search(where('project_name') == task_project), 'task_name')
 
-		start_time = get_timestamp()
-		existing_task_names = select_column(task_table.search(where('project_name') == task_project), 'task_name')
+			if task_name not in existing_task_names:
+				task_table.insert({'task_name': task_name, 'project_name': task_project, 'start_date': start_time, 'end_date': '',
+				'last_restart_date': start_time, 'last_paused_date': start_time, 'paused': True, 'duration': '0 days 0:00:00'})
 
-		if task_name not in existing_task_names:
-			task_table.insert({'task_name': task_name, 'project_name': task_project, 'start_date': start_time, 'end_date': '',
-			'last_restart_date': start_time, 'last_paused_date': start_time, 'paused': True, 'duration': '0 days 0:00:00'})
+				if task_project not in project_list:
+					project_table.insert({'project_name': task_project, 'created_on': start_time})
 
-			if task_project not in project_list:
-				project_table.insert({'project_name': task_project, 'created_on': start_time})
-
-			custom_print_green(f'Task: "{task_name}" successfully started. Time: {start_time}')
-		else:
-			custom_print_red('That Task name already exists for that project. Please choose a different Task name')
+				custom_print_green(f'Task: "{task_name}" successfully started. Time: {start_time}')
+			else:
+				custom_print_red('That Task name already exists for that project. Please choose a different Task name')
 
 	elif user_input == 'end_task':
 
