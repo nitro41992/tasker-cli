@@ -178,7 +178,7 @@ while 1:
 			complete_while_typing=True
 		)
 
-		if task_name or task_project is '':
+		if task_name == '' or task_project == '':
 			custom_print_red('The Task and/or Project cannot be blank.')
 		else:	
 			start_time = get_timestamp()
@@ -218,7 +218,7 @@ while 1:
 			complete_while_typing=True
 		)
 
-		if task_name or task_project is '':
+		if task_name == '' or task_project == '':
 			custom_print_red('The Task and/or Project cannot be blank.')
 		else:	
 			start_time = get_timestamp()
@@ -309,6 +309,11 @@ while 1:
 					task_table.remove((where('task_name') == task_to_delete) & (where('project_name') == current_task_project) )
 					custom_print_green(f'Task: "{task_to_delete}" successfully deleted.')
 
+					project_list = select_column(task_table.search(where('project_name') == current_task_project), 'project_name')
+					if len(project_list) == 0:
+						project_table.remove((where('project_name') == current_task_project) )
+
+
 			elif confirm == 'n':
 				custom_print_green('Deletion cancelled.')
 			else:
@@ -344,13 +349,14 @@ while 1:
 			wrap_lines=False,
 			complete_while_typing=True
 		)
-
-		current_time = get_timestamp()
-		current_task_project = task_to_pause.split(' - ')[1]
-		task_to_pause = task_to_pause.split(' - ')[0]
-		task_list = select_column(task_table.search((where('end_date') == '') & (where('paused') == False)), 'task_name')
-
+		
 		if task_to_pause in task_list:
+
+			current_time = get_timestamp()
+			current_task_project = task_to_pause.split(' - ')[1]
+			task_to_pause = task_to_pause.split(' - ')[0]
+			task_list = select_column(task_table.search((where('end_date') == '') & (where('paused') == False)), 'task_name')
+
 			current_start_time = select_column(task_table.search(where('task_name') == task_to_pause), 'last_restart_date')[0]
 			current_duration = select_column(task_table.search(where('task_name') == task_to_pause), 'duration')[0]
 
@@ -387,14 +393,15 @@ while 1:
 			complete_while_typing=True
 		)
 
-		current_task_project = task_to_restart.split(' - ')[1]
-		task_to_restart = task_to_restart.split(' - ')[0]
-
-		current_time = get_timestamp()
-		task_list = select_column(task_table.search((where('end_date') == '') & (where('paused') == True)), 'task_name')
-		running_tasks = select_column(task_table.search((where('end_date') == '') & (where('paused') == False)), 'task_name')
-
 		if task_to_restart in task_list:
+
+			current_task_project = task_to_restart.split(' - ')[1]
+			task_to_restart = task_to_restart.split(' - ')[0]
+
+			current_time = get_timestamp()
+			task_list = select_column(task_table.search((where('end_date') == '') & (where('paused') == True)), 'task_name')
+			running_tasks = select_column(task_table.search((where('end_date') == '') & (where('paused') == False)), 'task_name')
+
 
 			is_ended = select_column(task_table.search((where('task_name') == task_to_restart) & (where('project_name') == current_task_project)), 'end_date')[0]
 			if is_ended == '':
@@ -432,12 +439,12 @@ while 1:
 			default = task_to_update_name.split(' - ')[0]
 		).split(' - ')[0]
 
-		task_list = select_column(task_table.all(), 'task_name')
-		current_task_project = task_to_update_name.split(' - ')[1]
-		task_to_update_name = task_to_update_name.split(' - ')[0]
-
 		if task_to_update_name in task_list:
-			
+
+			task_list = select_column(task_table.all(), 'task_name')
+			current_task_project = task_to_update_name.split(' - ')[1]
+			task_to_update_name = task_to_update_name.split(' - ')[0]
+
 			existing_task_names = select_column(task_table.search(where('project_name') == current_task_project), 'task_name')
 		
 			if name_to_update_to not in existing_task_names:
@@ -549,9 +556,10 @@ while 1:
 					wrap_lines=False, 
 					complete_while_typing=True)
 
-		current_time = get_timestamp()
 		
 		if task_to_complete in task_list:
+
+			current_time = get_timestamp()
 
 			current_task_project = task_to_complete.split(' - ')[1]
 			task_to_complete = task_to_complete.split(' - ')[0]
@@ -622,7 +630,6 @@ while 1:
 			custom_print_green(f'Project "{project_name_to_update}" has been successfully updated to "{project_name_to_update_to}"')		
 		else:
 			custom_print_red('That Project does not exist, please try again.')		
-
 
 	else:
 		custom_print_red('Not a valid command. Press TAB to view list of possible commands.')
