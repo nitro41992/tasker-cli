@@ -16,8 +16,11 @@ from pyfiglet import Figlet
 from tinydb import Query, TinyDB, where
 from tinydb.operations import delete
 from art import text2art
+from prompt_toolkit.styles import Style
 
-
+style = Style.from_dict({
+    '':          'gold'
+})
 
 prompt_symbol = FormattedText([
     ('gold bold', '<< tasker >> ')
@@ -150,7 +153,7 @@ custom_print_green('Press TAB to see the list of commands.')
 
 while 1:
 
-	user_input = prompt(prompt_symbol, completer=command_completer, wrap_lines=False, complete_while_typing=True)
+	user_input = prompt(prompt_symbol, completer=command_completer, wrap_lines=False, complete_while_typing=True, style=style)
 
 	if user_input == 'exit':
 
