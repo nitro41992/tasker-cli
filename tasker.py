@@ -555,28 +555,31 @@ while 1:
 			paused_tasks = select_column(task_table.search((where('paused') == True) & (where('project_name') == current_task_project)), 'task_name')
 			current_duration = select_column(task_table.search((where('task_name') == task_to_complete) & (where('project_name') == current_task_project)), 'duration')[0]
 
-			start_time = task_session.prompt('Do you want to update the start time? (Press ENTER for default) ', wrap_lines=False, default=str(start_time))
-			end_time = task_session.prompt('When was the Task completed? (Press ENTER for default) ', wrap_lines=False, default=str(current_time))
-			task_duration = task_session.prompt('How long did it take to complete? ', wrap_lines=False, default='0 days 0:00:00')
+			if task_to_complete in paused_tasks:
+				
+				start_time = task_session.prompt('Do you want to update the start time? (Press ENTER for default) ', wrap_lines=False, default=str(start_time))
+				end_time = task_session.prompt('When was the Task completed? (Press ENTER for default) ', wrap_lines=False, default=str(current_time))
+				task_duration = task_session.prompt('How long did it take to complete? ', wrap_lines=False, default='0 days 0:00:00')
 
-			start_time_check = check_date_format(start_time)
-			end_time_check = check_date_format(end_time)
-			task_duration_check = check_delta_format(task_duration)
+				start_time_check = check_date_format(start_time)
+				end_time_check = check_date_format(end_time)
+				task_duration_check = check_delta_format(task_duration)
 
-			if (start_time_check or end_time_check or task_duration_check != None):
-				if task_duration != '0 days 0:00:00':
-					if task_to_complete in paused_tasks:
-						task_table.update({'start_date': start_time,'duration': task_duration, 'end_date': end_time, 'paused': False}, (where('task_name') == task_to_complete) & (where('project_name') == current_task_project))
-						custom_print_green(f'Task: "{task_to_complete}" successfully completed. Time: {end_time}')
+
+				if (start_time_check or end_time_check or task_duration_check != None):
+					if task_duration != '0 days 0:00:00':
+						
+							task_table.update({'start_date': start_time,'duration': task_duration, 'end_date': end_time, 'paused': False}, (where('task_name') == task_to_complete) & (where('project_name') == current_task_project))
+							custom_print_green(f'Task: "{task_to_complete}" successfully completed. Time: {end_time}')
+						
 					else:
-						custom_print_red('This Task is currently not paused. Please pause the task first to complete manually.')
+						custom_print_red('The duration cannot be 0 days 0:00:00.')
 				else:
-					custom_print_red('The duration cannot be 0 days 0:00:00.')
+					custom_print_red(start_time_check)
+					custom_print_red(end_time_check)
+					custom_print_red(task_duration_check)
 			else:
-				custom_print_red(start_time_check)
-				custom_print_red(end_time_check)
-				custom_print_red(task_duration_check)
-
+						custom_print_red('This Task is currently not paused. Please pause the task first to complete manually.')
 		else:
 			custom_print_red('That Task does not exist or has been completed, please try again.')
 
