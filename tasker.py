@@ -149,7 +149,15 @@ command_completer = WordCompleter(
 	ignore_case=True)
 
 custom_print_blue(text2art('<< tasker >>'))
-custom_print_green('Press TAB to see the list of commands.')
+custom_print_green('''
+tasker is a simple tool to track your daily/ weekly tasks and export them as needed.
+You can add running tasks and start tracking the time right away or add paused tasks you can start later.
+Simply add a task and what project it belongs to. tasker will add it to your task list.
+Pause a task, or all tasks, and restar them later. tasker will aggregate total duration.
+End the task completely to let tasker know you are done with the task and it is ready to be exported.
+Press TAB to see the list of commands.
+
+''')
 
 while 1:
 
