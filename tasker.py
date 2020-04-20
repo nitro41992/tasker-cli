@@ -271,7 +271,7 @@ while 1:
 			formatted_start_date = datetime.strptime(current_start_time, format_date_str)
 
 			if 'days' in current_duration:
-				days_v_hms = current_duration.split('days,')
+				days_v_hms = current_duration.split('days')
 				hms = days_v_hms[1].split(':')
 			else:
 				hms = current_duration.split(':')
@@ -375,7 +375,7 @@ while 1:
 			formatted_start_date = datetime.strptime(current_start_time, format_date_str)
 			
 			if 'days' in current_duration:
-				days_v_hms = current_duration.split('days,')
+				days_v_hms = current_duration.split('days')
 				hms = days_v_hms[1].split(':')
 			else:
 				hms = current_duration.split(':')
@@ -499,7 +499,7 @@ while 1:
 				formatted_start_date = datetime.strptime(current_start_time, format_date_str)
 				
 				if 'days' in current_duration:
-					days_v_hms = current_duration.split('days,')
+					days_v_hms = current_duration.split('days')
 					hms = days_v_hms[1].split(':')
 				else:
 					hms = current_duration.split(':')
