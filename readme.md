@@ -10,4 +10,4 @@
 * Executable at dist/tasker.exe
 * To re-complie:
     * ```pip install Pyinstaller```
-	* ```pyinstaller --onefile tasker.py```
+	  * ```pyinstaller --onefile tasker.py```
