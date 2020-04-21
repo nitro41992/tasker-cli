@@ -57,7 +57,7 @@ command_list = ['add_running_task',
 				'delete_task', 
 				'end_task', 
 				'list_pending_tasks', 
-				'list_tasks', 
+				'list_all_tasks', 
 				'pause_task', 
 				'start_paused_task', 
 				'update_task_name', 
@@ -72,7 +72,7 @@ sorted_commands = sorted(command_list, key=str.lower)
 
 def get_running_duration(restart_datetime, current_duration, is_paused, is_ended):
 
-	if (is_paused == False):
+	if (is_paused == False) and (is_ended.strip() == ''):
 		current_time = get_timestamp()
 		
 		formatted_current_time = datetime.strptime(current_time, format_date_str)
@@ -88,6 +88,8 @@ def get_running_duration(restart_datetime, current_duration, is_paused, is_ended
 		dt = timedelta(hours=int(hms[0]), minutes=int(hms[1]), seconds=float(hms[2]))
 
 		diff = formatted_current_time - formatted_start_date
+		# print(current_duration)
+		# print(diff)
 		paused_duration = str(dt + diff)
 
 		return(paused_duration)
@@ -161,10 +163,16 @@ def output_task_table(dict_list, columns):
 		for column in columns:
 			column = column.lower().replace(" ", "_")
 			if type(task[column]) != bool:
-				task[column] = format_column_value(task[column], max_line_length)
+				task[column] = format_column_value(task[column], max_line_length).strip()
 		running_duration = get_running_duration(task['last_restart_date'], task['duration'], task['paused'], task['end_date'])
-		# task['duration'] = running_duration
-		cli_table.add_row([task['task_name'].strip(), task['project_name'].strip(), task['start_date'], task['end_date'], task['last_restart_date'], task['last_paused_date'], task['paused'], running_duration])
+		cli_table.add_row([
+			task['task_name'], 
+			task['project_name'],
+			task['start_date'], task['end_date'], 
+			task['last_restart_date'], 
+			task['last_paused_date'], 
+			task['paused'], 
+			running_duration])
 	echo(cli_table)
 
 def custom_print_green(value):
@@ -372,7 +380,7 @@ while 1:
 		else:
 			custom_print_red('There are no pending Tasks.')
 	
-	elif user_input == 'list_tasks':
+	elif user_input == 'list_all_tasks':
 		all_tasks =  task_table.all()
 		if len(all_tasks) > 0:
 			output_task_table(all_tasks, task_table_columns)
