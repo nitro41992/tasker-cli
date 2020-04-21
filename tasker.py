@@ -47,8 +47,8 @@ task_table_columns = ["Task Name",
 					"Project Name", 
 					"Start Date", 
 					"End Date", 
-					"Last Paused Date",
 					"Last Restart Date",
+					"Last Paused Date",
 					"Paused", 
 					"Duration"]
 
@@ -89,8 +89,11 @@ def get_running_duration(restart_datetime, current_duration, is_paused, is_ended
 
 		diff = formatted_current_time - formatted_start_date
 		paused_duration = str(dt + diff)
+
 		return(paused_duration)
+
 	else:
+
 		return(current_duration)
 
 def get_timestamp(format = format_date_str):
@@ -160,8 +163,8 @@ def output_task_table(dict_list, columns):
 			if type(task[column]) != bool:
 				task[column] = format_column_value(task[column], max_line_length)
 		running_duration = get_running_duration(task['last_restart_date'], task['duration'], task['paused'], task['end_date'])
-		task['duration'] = running_duration
-		cli_table.add_row([task['task_name'], task['project_name'], task['start_date'], task['end_date'], task['last_restart_date'], task['last_paused_date'], task['paused'], task['duration']])
+		# task['duration'] = running_duration
+		cli_table.add_row([task['task_name'].strip(), task['project_name'].strip(), task['start_date'], task['end_date'], task['last_restart_date'], task['last_paused_date'], task['paused'], running_duration])
 	echo(cli_table)
 
 def custom_print_green(value):
