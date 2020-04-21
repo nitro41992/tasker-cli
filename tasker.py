@@ -12,7 +12,7 @@ from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.formatted_text import FormattedText
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.styles import Style
-from pyfiglet import Figlet
+# from pyfiglet import Figlet
 from tinydb import Query, TinyDB, where
 from tinydb.operations import delete
 from art import text2art
@@ -35,7 +35,7 @@ project_table = db.table('projects')
 
 number_of_concurrent_tasks = 3
 
-max_line_length = 20
+max_line_length = 25
 
 project_list = []
 
@@ -47,6 +47,8 @@ task_table_columns = ["Task Name",
 					"Project Name", 
 					"Start Date", 
 					"End Date", 
+					"Last Paused Date",
+					"Last Restart Date",
 					"Paused", 
 					"Duration"]
 
@@ -68,24 +70,28 @@ command_list = ['add_running_task',
 
 sorted_commands = sorted(command_list, key=str.lower)
 
-def get_running_duration(restart_datetime, current_duration):
+def get_running_duration(restart_datetime, current_duration, is_paused, is_ended):
 
-	current_time = get_timestamp()
-	
-	formatted_current_time = datetime.strptime(current_time, format_date_str)
-	formatted_start_date = datetime.strptime(restart_datetime, format_date_str)
-	
-	print(current_duration)
-	if 'days' in current_duration:
-		days_v_hms = current_duration.split('days')
-		hms = days_v_hms[1].split(':')
+	if (is_paused == False):
+		current_time = get_timestamp()
+		
+		formatted_current_time = datetime.strptime(current_time, format_date_str)
+		formatted_start_date = datetime.strptime(restart_datetime.strip(), format_date_str)
+
+
+		if 'days' in current_duration:
+			days_v_hms = current_duration.split('days')
+			hms = days_v_hms[1].split(':')
+		else:
+			hms = current_duration.split(':')
+
+		dt = timedelta(hours=int(hms[0]), minutes=int(hms[1]), seconds=float(hms[2]))
+
+		diff = formatted_current_time - formatted_start_date
+		paused_duration = str(dt + diff)
+		return(paused_duration)
 	else:
-		hms = current_duration.split(':')
-
-	dt = timedelta(hours=int(hms[0]), minutes=int(hms[1]), seconds=float(hms[2]))
-
-	diff = formatted_current_time - formatted_start_date
-	return(str(dt + diff))
+		return(current_duration)
 
 def get_timestamp(format = format_date_str):
     result = datetime.now().strftime(format)
@@ -94,13 +100,13 @@ def get_timestamp(format = format_date_str):
 def check_date_format(date_to_test):
 	try:
 		datetime.strptime(date_to_test,format_date_str)
-	except ValueError as err:
+	except:
 		return(f'{date_to_test} is not the right format. The format should be {format_date_str}')
 
 def check_delta_format(delta_to_test):
 	try:
 		datetime.strptime(delta_to_test,format_delta_str)
-	except ValueError as err:
+	except:
 		return(f'{delta_to_test} is not the right format. The format should be {delta_to_test}')
 
 def select_column(input_list, column1, column2=''):
@@ -129,17 +135,19 @@ def to_csv(data_list, name):
 
 def format_column_value(line, max_line_length):
     ACC_length = 0
-    words = line.split(" ")
-    formatted_comment = ""
-    for word in words:
-        if ACC_length + (len(word) + 1) <= max_line_length:
-            formatted_comment = formatted_comment + word + " "
-            ACC_length = ACC_length + len(word) + 1
-        else:
-
-            formatted_comment = formatted_comment + "\n" + word + " "
-            ACC_length = len(word) + 1
-    return formatted_comment
+    if '\n' not in line:
+        words = line.split(" ")
+        formatted_line = ""
+        for word in words:
+            if ACC_length + (len(word) + 1) <= max_line_length:
+                formatted_line = formatted_line + word + " "
+                ACC_length = ACC_length + len(word) + 1
+            else:
+                formatted_line = formatted_line + "\n" + word + " "
+                ACC_length = len(word) + 1
+        return(formatted_line)
+    else:
+        return(line.strip())
 
 def output_task_table(dict_list, columns):
 
@@ -151,9 +159,9 @@ def output_task_table(dict_list, columns):
 			column = column.lower().replace(" ", "_")
 			if type(task[column]) != bool:
 				task[column] = format_column_value(task[column], max_line_length)
-		running_duration = get_running_duration(task['last_restart_date'], task['duration'])
+		running_duration = get_running_duration(task['last_restart_date'], task['duration'], task['paused'], task['end_date'])
 		task['duration'] = running_duration
-		cli_table.add_row([task['task_name'], task['project_name'], task['start_date'], task['end_date'], task['paused'], task['duration']])
+		cli_table.add_row([task['task_name'], task['project_name'], task['start_date'], task['end_date'], task['last_restart_date'], task['last_paused_date'], task['paused'], task['duration']])
 	echo(cli_table)
 
 def custom_print_green(value):
@@ -286,7 +294,7 @@ while 1:
 			paused_tasks = select_column(task_table.search((where('paused') == True) & (where('project_name') == current_task_project)), 'task_name')
 
 			current_start_time = select_column(task_table.search(where('task_name') == task_to_end), 'last_restart_date')[0]
-			current_duration = select_column(task_table.search((where('task_name') == task_to_complete) & (where('project_name') == current_task_project)), 'duration')[0]
+			current_duration = select_column(task_table.search((where('task_name') == task_to_end) & (where('project_name') == current_task_project)), 'duration')[0]
 
 			formatted_current_time = datetime.strptime(current_time, format_date_str)
 			formatted_start_date = datetime.strptime(current_start_time, format_date_str)
