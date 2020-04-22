@@ -16,14 +16,8 @@ from tinydb import Query, TinyDB, where
 from tinydb.operations import delete
 from art import text2art
 
-style = Style.from_dict({
-    '':          'gold'
-})
-
-
-prompt_symbol = FormattedText([
-    ('gold bold', '<< tasker >> ')
-])
+style = Style.from_dict({'':'gold'})
+prompt_symbol = FormattedText([('gold bold', '<< tasker >> ')])
 
 dirname = os.path.dirname(__file__)
 datafile = os.path.join(dirname, 'db.json')
@@ -32,22 +26,13 @@ task_table = db.table('tasks')
 project_table = db.table('projects')
 name_table = db.table('names')
 
-
 number_of_concurrent_tasks = 3
-
 max_line_length = 25
-
-
-
 project_list = []
 
 format_date_str = "%A, %d %b %Y %I:%M:%S %p"
-
 format_delta_str_hours = "%d days %H:%M:%S"
-# format_delta_str_days = "%d days %H:%M:%S"
-
 filename_format = '%Y-%m-%d %I%M-%p'
-
 zero_delta = '0 days 0:00:00'
 
 task_table_columns = ["Task Name", 
@@ -58,7 +43,6 @@ task_table_columns = ["Task Name",
 					"Last Paused Date",
 					"Paused", 
 					"Duration"]
-
 command_list = ['add_running_task', 
 				'add_paused_task', 
 				'delete_task', 
@@ -74,7 +58,6 @@ command_list = ['add_running_task',
 				'delete_completed_tasks',
 				'complete_task_manually',
 				'update_project_name']
-
 sorted_commands = sorted(command_list, key=str.lower)
 
 def convert_to_timedelta(value):
@@ -138,6 +121,35 @@ def select_column(input_list, column1, column2=''):
 			row = f'{c1} - {c2}'
 			out.append(row)
 		return(out)
+
+def get_where_clauses(clauses):
+	where_clauses = ''
+	for key, value in clauses.items():
+		if type(value[1]) != bool:
+			clause = f"(where('{key}') {value[0]} '{value[1]}')"
+			where_clauses = where_clauses + clause + ' '
+		else:
+			clause = f"(where('{key}') {value[0]} {value[1]})"
+			where_clauses = where_clauses + clause + ' '
+	where_clauses = where_clauses.strip().replace(') (', ') & (')
+	return(where_clauses)
+
+def get_table_values(table, clauses, return_type, column1 = '', column2 = ''):
+	if clauses != None:
+		where_clauses = get_where_clauses(clauses)
+	if return_type == 'column':
+		if clauses != None:
+			total_query = f"select_column({table}.search({where_clauses}), '{column1}', '{column2}')"
+		else:
+			total_query = f"select_column({table}.all(), '{column1}', '{column2}')"
+		return(eval(total_query))
+	elif return_type == 'value':
+		total_query = f"select_column({table}.search({where_clauses}), '{column1}', '{column2}')[0]"
+		return(eval(total_query))
+	elif return_type == 'rows':
+		total_query = f"{table}.search({where_clauses})"
+		print(total_query)
+		return(eval(total_query))
 
 def to_csv(data_list, name):
 
@@ -226,7 +238,8 @@ while 1:
 
 	elif user_input == 'add_running_task':
 
-		project_list = select_column(project_table.all(), 'project_name')
+		# project_list = select_column(project_table.all(), 'project_name')
+		project_list = get_table_values('project_table', None, 'column', 'project_name')
 		project_command_completer = WordCompleter(project_list, ignore_case=True)
 
 		task_session = PromptSession()
@@ -246,18 +259,36 @@ while 1:
 			custom_print_red('The Task and/or Project cannot be blank.')
 		else:	
 			start_time = get_timestamp()
-			existing_task_names = select_column(task_table.search(where('project_name') == task_project), 'task_name')
-			running_tasks = select_column(task_table.search((where('end_date') == '') & (where('paused') == False)), 'task_name')
+
+			# existing_task_names = select_column(task_table.search(where('project_name') == task_project), 'task_name')
+			project_clause = {'project_name': ('==', task_project)}
+			existing_task_names = get_table_values('task_table', project_clause, 'column', 'task_name')
+
+			# running_tasks = select_column(task_table.search((where('end_date') == '') & (where('paused') == False)), 'task_name')
+			running_clause = {'end_date': ('==', ''), 'paused': ('==', False)}
+			running_tasks = get_table_values('task_table', running_clause, 'column', 'task_name')
 
 			if task_name not in existing_task_names:
 
 				if len(running_tasks) < number_of_concurrent_tasks:
-					task_table.insert({'task_name': task_name, 'project_name': task_project, 'start_date': start_time, 'end_date': '',
-					'last_restart_date': start_time, 'last_paused_date': '', 'paused': False, 'duration': zero_delta})
+
+					task_table.insert({
+						'task_name': task_name, 
+						'project_name': task_project, 
+						'start_date': start_time, 
+						'end_date': '',
+						'last_restart_date': start_time, 
+						'last_paused_date': '', 
+						'paused': False, 
+						'duration': zero_delta})
+
 					custom_print_green(f'Task: "{task_name}" successfully started. Time: {start_time}')
 
 					if task_project not in project_list:
-						project_table.insert({'project_name': task_project, 'created_on': start_time})
+						
+						project_table.insert({
+							'project_name': task_project, 
+							'created_on': start_time})
 
 				else: 
 					custom_print_red('You can only have a maximum of 3 running tasks at any time. Please Pause or End existing running Tasks.')
@@ -301,7 +332,10 @@ while 1:
 
 	elif user_input == 'end_task':
 
-		task_list = select_column(task_table.search(where('end_date') == ''), 'task_name', 'project_name')
+		running_clause = {'end_date': ('==', ''), 'paused': ('==', False)}
+		
+		# task_list = select_column(task_table.search(where('end_date') == ''), 'task_name', 'project_name')
+		task_list = get_table_values('task_table', running_clause, 'column', 'task_name', 'project_name')
 		task_command_completer = WordCompleter(task_list, ignore_case=True)
 
 		task_session = PromptSession()
@@ -309,16 +343,22 @@ while 1:
 		complete_while_typing=True)
 		
 		if task_to_end in task_list:
-
+			
 			current_task_project = task_to_end.split(' - ')[1]
 			task_to_end = task_to_end.split(' - ')[0]
 
 			current_time = get_timestamp()
-			task_list = select_column(task_table.search(where('end_date') == ''), 'task_name')
-			paused_tasks = select_column(task_table.search((where('paused') == True) & (where('project_name') == current_task_project)), 'task_name')
 
-			current_start_time = select_column(task_table.search(where('task_name') == task_to_end), 'last_restart_date')[0]
-			current_duration = select_column(task_table.search((where('task_name') == task_to_end) & (where('project_name') == current_task_project)), 'duration')[0]
+			# paused_tasks = select_column(task_table.search((where('paused') == True) & (where('project_name') == current_task_project)), 'task_name')
+			un_paused_tasks_by_project_clauses = {'end_date': ('==', ''), 'project_name': ('==', current_task_project)}
+			paused_tasks = get_table_values('task_table', un_paused_tasks_by_project_clauses, 'column', 'task_name')
+
+			
+			# current_start_time = select_column(task_table.search(where('task_name') == task_to_end), 'last_restart_date')[0]
+			# current_duration = select_column(task_table.search((where('task_name') == task_to_end) & (where('project_name') == current_task_project)), 'duration')[0]
+			unique_clause = {'task_name': ('==', task_to_end), 'project_name': ('==', current_task_project)}
+			current_start_time = get_table_values('task_table', unique_clause, 'value', 'last_restart_date')
+			current_duration = get_table_values('task_table', unique_clause, 'value', 'duration')
 
 			formatted_current_time = datetime.strptime(current_time, format_date_str)
 			formatted_start_date = datetime.strptime(current_start_time, format_date_str)
