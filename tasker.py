@@ -15,11 +15,11 @@ from prompt_toolkit.styles import Style
 from tinydb import Query, TinyDB, where
 from tinydb.operations import delete
 from art import text2art
-from prompt_toolkit.styles import Style
 
 style = Style.from_dict({
     '':          'gold'
 })
+
 
 prompt_symbol = FormattedText([
     ('gold bold', '<< tasker >> ')
@@ -36,11 +36,18 @@ number_of_concurrent_tasks = 3
 
 max_line_length = 25
 
+
+
 project_list = []
 
 format_date_str = "%A, %d %b %Y %I:%M:%S %p"
-format_delta_str = "%d days %H:%M:%S"
+
+format_delta_str_hours = "%d days %H:%M:%S"
+# format_delta_str_days = "%d days %H:%M:%S"
+
 filename_format = '%Y-%m-%d %I%M-%p'
+
+zero_delta = '0 days 0:00:00'
 
 task_table_columns = ["Task Name", 
 					"Project Name", 
@@ -69,6 +76,21 @@ command_list = ['add_running_task',
 
 sorted_commands = sorted(command_list, key=str.lower)
 
+def convert_to_timedelta(value):
+	value = str(value)
+	if 'days' in value:
+		days_v_hms = value.split('days')
+		hms = days_v_hms[1].split(':')
+		dt = timedelta(days=int(days_v_hms[0]), hours=int(hms[0]), minutes=int(hms[1]), seconds=float(hms[2]))
+	elif 'day' in value:
+		days_v_hms = value.split('day')
+		hms = days_v_hms[1].split(':')
+		dt = timedelta(days=int(days_v_hms[0]), hours=int(hms[0]), minutes=int(hms[1]), seconds=float(hms[2]))
+	else:	
+		hms = value.split(':')
+		dt = timedelta(hours=int(hms[0]), minutes=int(hms[1]), seconds=float(hms[2]))
+	return(dt)
+
 def get_running_duration(restart_datetime, current_duration, is_paused, is_ended):
 
 	if (is_paused == False) and (is_ended.strip() == ''):
@@ -77,18 +99,9 @@ def get_running_duration(restart_datetime, current_duration, is_paused, is_ended
 		formatted_current_time = datetime.strptime(current_time, format_date_str)
 		formatted_start_date = datetime.strptime(restart_datetime.strip(), format_date_str)
 
-
-		if 'days' in current_duration:
-			days_v_hms = current_duration.split('days')
-			hms = days_v_hms[1].split(':')
-		else:
-			hms = current_duration.split(':')
-
-		dt = timedelta(hours=int(hms[0]), minutes=int(hms[1]), seconds=float(hms[2]))
+		dt = convert_to_timedelta(current_duration)
 
 		diff = formatted_current_time - formatted_start_date
-		# print(current_duration)
-		# print(diff)
 		paused_duration = str(dt + diff)
 
 		return(paused_duration)
@@ -109,9 +122,9 @@ def check_date_format(date_to_test):
 
 def check_delta_format(delta_to_test):
 	try:
-		datetime.strptime(delta_to_test,format_delta_str)
-	except:
-		return(f'{delta_to_test} is not the right format. The format should be {delta_to_test}')
+		convert_to_timedelta(delta_to_test)
+	except ValueError as error:
+		return(str(error)) #f'{delta_to_test} is not the right format. The format should be {format_delta_str_hours}')
 
 def select_column(input_list, column1, column2=''):
 	if column2 == '':
@@ -239,7 +252,7 @@ while 1:
 
 				if len(running_tasks) < number_of_concurrent_tasks:
 					task_table.insert({'task_name': task_name, 'project_name': task_project, 'start_date': start_time, 'end_date': '',
-					'last_restart_date': start_time, 'last_paused_date': '', 'paused': False, 'duration': '0 days 0:00:00'})
+					'last_restart_date': start_time, 'last_paused_date': '', 'paused': False, 'duration': zero_delta})
 					custom_print_green(f'Task: "{task_name}" successfully started. Time: {start_time}')
 
 					if task_project not in project_list:
@@ -276,7 +289,7 @@ while 1:
 
 			if task_name not in existing_task_names:
 				task_table.insert({'task_name': task_name, 'project_name': task_project, 'start_date': start_time, 'end_date': '',
-				'last_restart_date': start_time, 'last_paused_date': start_time, 'paused': True, 'duration': '0 days 0:00:00'})
+				'last_restart_date': start_time, 'last_paused_date': start_time, 'paused': True, 'duration': zero_delta})
 
 				if task_project not in project_list:
 					project_table.insert({'project_name': task_project, 'created_on': start_time})
@@ -309,13 +322,7 @@ while 1:
 			formatted_current_time = datetime.strptime(current_time, format_date_str)
 			formatted_start_date = datetime.strptime(current_start_time, format_date_str)
 
-			if 'days' in current_duration:
-				days_v_hms = current_duration.split('days')
-				hms = days_v_hms[1].split(':')
-			else:
-				hms = current_duration.split(':')
-
-			dt = timedelta(hours=int(hms[0]), minutes=int(hms[1]), seconds=float(hms[2]))
+			dt = convert_to_timedelta(current_duration)
 
 			diff = formatted_current_time - formatted_start_date
 			total_duration = str(dt + diff)
@@ -324,7 +331,7 @@ while 1:
 				task_table.update({'duration': total_duration, 'end_date': current_time, 'paused': False}, (where('task_name') == task_to_end) & (where('project_name') == current_task_project))
 				custom_print_green(f'Task: "{task_to_end}" successfully ended. Time: {current_time}')
 			else:
-				if current_duration != '0 days 0:00:00':
+				if current_duration != zero_delta:
 					task_table.update({'end_date': current_time, 'paused': False}, (where('task_name') == task_to_end) & (where('project_name') == current_task_project))
 					custom_print_green(f'Task: "{task_to_end}" successfully ended. Time: {current_time}')
 				else:
@@ -413,13 +420,7 @@ while 1:
 			formatted_current_time = datetime.strptime(current_time, format_date_str)
 			formatted_start_date = datetime.strptime(current_start_time, format_date_str)
 			
-			if 'days' in current_duration:
-				days_v_hms = current_duration.split('days')
-				hms = days_v_hms[1].split(':')
-			else:
-				hms = current_duration.split(':')
-
-			dt = timedelta(hours=int(hms[0]), minutes=int(hms[1]), seconds=float(hms[2]))
+			dt = convert_to_timedelta(current_duration)
 
 			diff = formatted_current_time - formatted_start_date
 			paused_duration = str(dt + diff)
@@ -537,13 +538,7 @@ while 1:
 				formatted_current_time = datetime.strptime(current_time, format_date_str)
 				formatted_start_date = datetime.strptime(current_start_time, format_date_str)
 				
-				if 'days' in current_duration:
-					days_v_hms = current_duration.split('days')
-					hms = days_v_hms[1].split(':')
-				else:
-					hms = current_duration.split(':')
-
-				dt = timedelta(hours=int(hms[0]), minutes=int(hms[1]), seconds=float(hms[2]))
+				dt = convert_to_timedelta(current_duration)
 
 				diff = formatted_current_time - formatted_start_date
 				paused_duration = str(dt + diff)
@@ -623,25 +618,25 @@ while 1:
 
 				start_time = task_session.prompt('Do you want to update the start time? (Press ENTER for default) ', wrap_lines=False, default=str(start_time))
 				end_time = task_session.prompt('When was the Task completed? (Press ENTER for default) ', wrap_lines=False, default=str(current_time))
-				task_duration = task_session.prompt('How long did it take to complete? ', wrap_lines=False, default='0 days 0:00:00')
+				task_duration = task_session.prompt('How long did it take to complete? ', wrap_lines=False, default=zero_delta)
 
 				start_time_check = check_date_format(start_time)
 				end_time_check = check_date_format(end_time)
 				task_duration_check = check_delta_format(task_duration)
 
-
-				if (start_time_check or end_time_check or task_duration_check != None):
-					if task_duration != '0 days 0:00:00':
-						
-							task_table.update({'start_date': start_time,'duration': task_duration, 'end_date': end_time, 'paused': False}, (where('task_name') == task_to_complete) & (where('project_name') == current_task_project))
-							custom_print_green(f'Task: "{task_to_complete}" successfully completed. Time: {end_time}')
-						
+				if (start_time_check == None) and (end_time_check == None) and (task_duration_check == None):
+					if task_duration != zero_delta:
+						task_table.update({'start_date': start_time,'duration': task_duration, 'end_date': end_time, 'paused': False}, (where('task_name') == task_to_complete) & (where('project_name') == current_task_project))
+						custom_print_green(f'Task: "{task_to_complete}" successfully completed. Time: {end_time}')
 					else:
 						custom_print_red('The duration cannot be 0 days 0:00:00.')
 				else:
-					custom_print_red(start_time_check)
-					custom_print_red(end_time_check)
-					custom_print_red(task_duration_check)
+					if start_time_check != None:
+						custom_print_red(start_time_check)
+					if end_time_check != None:
+						custom_print_red(end_time_check)
+					if task_duration_check != None:
+						custom_print_red(task_duration_check)
 			else:
 						custom_print_red('This Task is currently not paused. Please pause the Task first to complete manually.')
 		else:
