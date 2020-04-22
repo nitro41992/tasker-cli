@@ -30,6 +30,7 @@ datafile = os.path.join(dirname, 'db.json')
 db = TinyDB(datafile)
 task_table = db.table('tasks')
 project_table = db.table('projects')
+name_table = db.table('names')
 
 
 number_of_concurrent_tasks = 3
@@ -512,11 +513,17 @@ while 1:
 		completed_tasks =  task_table.search(where('end_date') != '')
 
 		task_session = PromptSession()
+		name_list = select_column(name_table.all(), 'name')
+		name_command_completer = WordCompleter(name_list, ignore_case=True)
 
 		if len(completed_tasks) > 0:
-			name = task_session.prompt('Your Name (Please be consistent with previous exports): ')
+			name = task_session.prompt('Your Name (Please be consistent with previous exports): ', completer=name_command_completer,)
 			to_csv(completed_tasks, name)
 			custom_print_green('Completed Tasks exported.')
+
+			if name not in name_list:
+				name_table.insert({'name': name, 'created_on': get_timestamp()})
+			
 		else:
 			custom_print_red('There were not completed Tasks to export.')
 
@@ -561,11 +568,17 @@ while 1:
 
 			if confirm == 'y':
 
-				name = task_session.prompt('Your Name (Please be consistent with previous exports): ')
+				name_list = select_column(name_table.all(), 'name')
+				name_command_completer = WordCompleter(name_list, ignore_case=True)
 
 				if len(completed_tasks) > 0:
+					name = task_session.prompt('Your Name (Please be consistent with previous exports): ', completer=name_command_completer,)
 					to_csv(completed_tasks, name)
 					custom_print_green('Completed Tasks exported.')
+
+					if name not in name_list:
+						name_table.insert({'name': name, 'created_on': get_timestamp()})
+					
 				else:
 					custom_print_red('There were not completed Tasks to export.')
 
