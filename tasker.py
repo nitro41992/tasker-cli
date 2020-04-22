@@ -296,8 +296,9 @@ while 1:
 				custom_print_red('That Task name already exists for that project. Please choose a different Task name')
 
 	elif user_input == 'add_paused_task':
-
-		project_list = select_column(project_table.all(), 'project_name')
+		
+		# project_list = select_column(project_table.all(), 'project_name')
+		project_list = get_table_values('project_table', None, 'column', 'project_name')
 		project_command_completer = WordCompleter(project_list, ignore_case=True)
 
 		task_session = PromptSession()
@@ -317,7 +318,9 @@ while 1:
 			custom_print_red('The Task and/or Project cannot be blank.')
 		else:	
 			start_time = get_timestamp()
-			existing_task_names = select_column(task_table.search(where('project_name') == task_project), 'task_name')
+			# existing_task_names = select_column(task_table.search(where('project_name') == task_project), 'task_name')
+			project_clause = {'project_name': ('==', task_project)}
+			existing_task_names = get_table_values('task_table', project_clause, 'column', 'task_name')
 
 			if task_name not in existing_task_names:
 				task_table.insert({'task_name': task_name, 'project_name': task_project, 'start_date': start_time, 'end_date': '',
@@ -331,10 +334,9 @@ while 1:
 				custom_print_red('That Task name already exists for that project. Please choose a different Task name')
 
 	elif user_input == 'end_task':
-
-		running_clause = {'end_date': ('==', ''), 'paused': ('==', False)}
 		
 		# task_list = select_column(task_table.search(where('end_date') == ''), 'task_name', 'project_name')
+		running_clause = {'end_date': ('==', ''), 'paused': ('==', False)}
 		task_list = get_table_values('task_table', running_clause, 'column', 'task_name', 'project_name')
 		task_command_completer = WordCompleter(task_list, ignore_case=True)
 
@@ -385,7 +387,9 @@ while 1:
 			custom_print_red('That Task does not exist or has ended, please try again.')
 	
 	elif user_input == 'delete_task':
-		task_list = select_column(task_table.all(), 'task_name', 'project_name')
+		
+		# task_list = select_column(task_table.all(), 'task_name', 'project_name')
+		task_list = get_table_values('task_table', None, 'column', 'task_name', 'project_name')
 		task_command_completer = WordCompleter(task_list, ignore_case=True)
 
 		task_session = PromptSession()
@@ -399,20 +403,22 @@ while 1:
 
 		if task_to_delete in task_list:
 
-			task_list = select_column(task_table.all(), 'task_name')
+			# task_list = select_column(task_table.all(), 'task_name')
 			current_task_project = task_to_delete.split(' - ')[1]
 			task_to_delete = task_to_delete.split(' - ')[0]
 
 			confirm =  task_session.prompt(f'Are you sure you want to delete "{task_to_delete}" (y/n): ')
 
 			if confirm == 'y':
-					task_table.remove((where('task_name') == task_to_delete) & (where('project_name') == current_task_project) )
+					task_table.remove((where('task_name') == task_to_delete) & (where('project_name') == current_task_project))
 					custom_print_green(f'Task: "{task_to_delete}" successfully deleted.')
 
-					project_list = select_column(task_table.search(where('project_name') == current_task_project), 'project_name')
+					# project_list = select_column(task_table.search(where('project_name') == current_task_project), 'project_name')
+					any_project_clause = {'project_name': ('==', current_task_project)}
+					task_list = get_table_values('task_table', any_project_clause, 'column', 'project_name')
+
 					if len(project_list) == 0:
 						project_table.remove((where('project_name') == current_task_project) )
-
 
 			elif confirm == 'n':
 				custom_print_green('Deletion cancelled.')

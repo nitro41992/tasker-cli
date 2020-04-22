@@ -6,6 +6,7 @@ dirname = os.path.dirname(__file__)
 datafile = os.path.join(dirname, 'db.json')
 db = TinyDB(datafile)
 task_table = db.table('tasks')
+project_table = db.table('projects')
 
 def select_column(input_list, column1, column2=''):
 	if column2 == '':
@@ -40,6 +41,7 @@ def get_table_values(table, clauses, return_type, column1 = '', column2 = ''):
 			total_query = f"select_column({table}.search({where_clauses}), '{column1}', '{column2}')"
 		else:
 			total_query = f"select_column({table}.all(), '{column1}', '{column2}')"
+		print(total_query)
 		return(eval(total_query))
 	elif return_type == 'value':
 		total_query = f"select_column({table}.search({where_clauses}), '{column1}', '{column2}')[0]"
@@ -77,13 +79,22 @@ def get_table_values(table, clauses, return_type, column1 = '', column2 = ''):
 # existing_task_names = get_table_values('task_table', project_clause, 'column', 'task_name')
 
 
-task_to_end = 'New Running Test'
+# task_to_end = 'New Running Test'
+# current_task_project = 'Test'
+# unique_clause = {'task_name': ('==', task_to_end), 'project_name': ('==', current_task_project)}
+# current_duration = get_table_values('task_table', unique_clause, 'value', 'duration')
+# print(current_duration)
+
+
+# running_tasks_by_project = {'end_date': ('==', ''), 'project_name': ('==', current_task_project)}
+# paused_tasks = get_table_values('task_table', running_tasks_by_project, 'column', 'task_name')
+# print(paused_tasks)
+
+
+# task_list = get_table_values('task_table', None, 'column', 'task_name', 'project_name')
+# print(task_list)
+
 current_task_project = 'Test'
-unique_clause = {'task_name': ('==', task_to_end), 'project_name': ('==', current_task_project)}
-current_duration = get_table_values('task_table', unique_clause, 'value', 'duration')
-print(current_duration)
-
-
-running_tasks_by_project = {'end_date': ('==', ''), 'project_name': ('==', current_task_project)}
-paused_tasks = get_table_values('task_table', running_tasks_by_project, 'column', 'task_name')
-print(paused_tasks)
+any_project_clause = {'project_name': ('==', current_task_project)}
+task_list = get_table_values('task_table', any_project_clause, 'column', 'project_name')
+print(task_list)
