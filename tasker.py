@@ -350,8 +350,8 @@ while 1:
 			current_time = get_timestamp()
 
 			# paused_tasks = select_column(task_table.search((where('paused') == True) & (where('project_name') == current_task_project)), 'task_name')
-			un_paused_tasks_by_project_clauses = {'end_date': ('==', ''), 'project_name': ('==', current_task_project)}
-			paused_tasks = get_table_values('task_table', un_paused_tasks_by_project_clauses, 'column', 'task_name')
+			running_tasks_by_project = {'end_date': ('==', ''), 'project_name': ('==', current_task_project)}
+			paused_tasks = get_table_values('task_table', running_tasks_by_project, 'column', 'task_name')
 
 			
 			# current_start_time = select_column(task_table.search(where('task_name') == task_to_end), 'last_restart_date')[0]
@@ -368,12 +368,14 @@ while 1:
 			diff = formatted_current_time - formatted_start_date
 			total_duration = str(dt + diff)
 
+			running_duration = get_running_duration(current_start_time, current_duration, False, '')
+
 			if task_to_end not in paused_tasks:
 				task_table.update({'duration': total_duration, 'end_date': current_time, 'paused': False}, (where('task_name') == task_to_end) & (where('project_name') == current_task_project))
 				custom_print_green(f'Task: "{task_to_end}" successfully ended. Time: {current_time}')
 			else:
-				if current_duration != zero_delta:
-					task_table.update({'end_date': current_time, 'paused': False}, (where('task_name') == task_to_end) & (where('project_name') == current_task_project))
+				if running_duration != zero_delta:
+					task_table.update({'duration': running_duration, 'end_date': current_time, 'paused': False}, (where('task_name') == task_to_end) & (where('project_name') == current_task_project))
 					custom_print_green(f'Task: "{task_to_end}" successfully ended. Time: {current_time}')
 				else:
 					custom_print_red('Cannot end Task because it is paused and the duration is 0 days 0:00:00')

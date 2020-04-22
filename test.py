@@ -32,7 +32,7 @@ def get_where_clauses(clauses):
 	return(where_clauses)
 
 def get_table_values(table, clauses, return_type, column1 = '', column2 = ''):
-	print(clauses)
+	# print(clauses)
 	if clauses != None:
 		where_clauses = get_where_clauses(clauses)
 	if return_type == 'column':
@@ -46,7 +46,7 @@ def get_table_values(table, clauses, return_type, column1 = '', column2 = ''):
 		return(eval(total_query))
 	elif return_type == 'rows':
 		total_query = f"{table}.search({where_clauses})"
-		print(total_query)
+		# print(total_query)
 		return(eval(total_query))
 
 
@@ -72,6 +72,18 @@ def get_table_values(table, clauses, return_type, column1 = '', column2 = ''):
 # print(get_table_values('task_table', clauses, 'column', 'task_name'))
 # # task_list = select_column(task_table.search(where('end_date') == ''), 'task_name')
 
-task_project = 'Test'
-project_clause = {'project_name': ('==', task_project)}
-existing_task_names = get_table_values('task_table', project_clause, 'column', 'task_name')
+# task_project = 'Test'
+# project_clause = {'project_name': ('==', task_project)}
+# existing_task_names = get_table_values('task_table', project_clause, 'column', 'task_name')
+
+
+task_to_end = 'New Running Test'
+current_task_project = 'Test'
+unique_clause = {'task_name': ('==', task_to_end), 'project_name': ('==', current_task_project)}
+current_duration = get_table_values('task_table', unique_clause, 'value', 'duration')
+print(current_duration)
+
+
+running_tasks_by_project = {'end_date': ('==', ''), 'project_name': ('==', current_task_project)}
+paused_tasks = get_table_values('task_table', running_tasks_by_project, 'column', 'task_name')
+print(paused_tasks)
