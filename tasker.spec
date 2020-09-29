@@ -4,7 +4,7 @@ block_cipher = None
 
 
 a = Analysis(['tasker.py'],
-             pathex=['C:\\Users\\nitro\\OneDrive\\Documents\\repos\\tasker-cli'],
+             pathex=['C:\\Users\\nitro\\Documents\\repos\\tasker-cli'],
              binaries=[],
              datas=[],
              hiddenimports=[],

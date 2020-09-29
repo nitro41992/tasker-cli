@@ -163,7 +163,7 @@ def to_csv(data_list, name):
 	current_time = get_timestamp(filename_format)
 
 	keys = data_list[0].keys()
-	with open(f'{name} - Completed Tasks {current_time}.csv', 'a', newline='') as output_file:
+	with open(f'{name} - Completed Tasks {current_time} Export.csv', 'a', newline='') as output_file:
 		dict_writer = csv.DictWriter(output_file, keys)
 		dict_writer.writeheader()
 		dict_writer.writerows(data_list)	
@@ -723,7 +723,7 @@ while 1:
 		proportions = (pd.to_timedelta(tasks['duration']) / total_duration)
 
 		timesheet_report['percentages'] = round(proportions * 100, 2)
-		timesheet_report['timesheet_hours'] = proportions * 35
+		timesheet_report['timesheet_hours'] = proportions * 70
 
 		cli_table = PrettyTable(hrules=ALL)
 		cli_table.field_names = ['task_name', 'project_name', 'duration', 'percentages', 'timesheet_hours']
