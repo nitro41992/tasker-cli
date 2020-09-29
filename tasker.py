@@ -2,13 +2,14 @@ import csv
 import os
 import time
 from datetime import datetime, timedelta
+import pandas as pd
 
 from click import echo
 from colorama import Fore, init
 from prettytable import ALL as ALL
 from prettytable import PrettyTable
 from prompt_toolkit import PromptSession, prompt
-from prompt_toolkit.completion import WordCompleter
+from prompt_toolkit.completion import WordCompleter, FuzzyCompleter
 from prompt_toolkit.formatted_text import FormattedText
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.styles import Style
@@ -29,6 +30,8 @@ name_table = db.table('names')
 number_of_concurrent_tasks = 3
 max_line_length = 25
 project_list = []
+hcis_codes = pd.read_csv('HCIS_Codes.csv')
+project_list = hcis_codes['Healthcare Division Program Name / Notes'] + ': ' + hcis_codes['(Fund/Index)      RAD Id']
 
 format_date_str = "%A, %d %b %Y %I:%M:%S %p"
 format_delta_str_hours = "%d days %H:%M:%S"
@@ -237,10 +240,12 @@ while 1:
 		break
 
 	elif user_input == 'add_running_task':
+		
 
-		# project_list = select_column(project_table.all(), 'project_name')
-		project_list = get_table_values('project_table', None, 'column', 'project_name')
-		project_command_completer = WordCompleter(project_list, ignore_case=True)
+
+		# project_list = get_table_values('project_table', None, 'column', 'project_name')
+		# project_list = hcis_codes['(Fund/Index)      RAD Id']
+		project_command_completer = FuzzyCompleter(WordCompleter(project_list, ignore_case=True))
 
 		task_session = PromptSession()
 
@@ -297,9 +302,9 @@ while 1:
 
 	elif user_input == 'add_paused_task':
 		
-		# project_list = select_column(project_table.all(), 'project_name')
-		project_list = get_table_values('project_table', None, 'column', 'project_name')
-		project_command_completer = WordCompleter(project_list, ignore_case=True)
+		# project_list = get_table_values('project_table', None, 'column', 'project_name')
+		# project_list = hcis_codes['(Fund/Index)      RAD Id']
+		project_command_completer = FuzzyCompleter(WordCompleter(project_list, ignore_case=True))
 
 		task_session = PromptSession()
 
@@ -703,39 +708,39 @@ while 1:
 		else:
 			custom_print_red('That Task does not exist or has been completed, please try again.')
 	
-	elif user_input == 'update_project_name':
+	# elif user_input == 'update_project_name':
 
-		project_list = select_column(project_table.all(), 'project_name')
-		project_command_completer = WordCompleter(project_list, ignore_case=True)
+	# 	# project_list = select_column(project_table.all(), 'project_name')
+	# 	project_command_completer = FuzzyCompleter(WordCompleter(project_list, ignore_case=True))
 
-		task_session = PromptSession()
+	# 	task_session = PromptSession()
 
-		project_name_to_update = task_session.prompt(
-			'Select Project Name to Update: ',
-			completer = project_command_completer,
-			wrap_lines = False,
-			complete_while_typing=True
-		)
+	# 	project_name_to_update = task_session.prompt(
+	# 		'Select Project Name to Update: ',
+	# 		completer = project_command_completer,
+	# 		wrap_lines = False,
+	# 		complete_while_typing=True
+	# 	)
 
-		if project_name_to_update in project_list:
+	# 	if project_name_to_update in project_list:
 
-			project_name_to_update_to = task_session.prompt(
-				'Update the Project Name: ',
-				completer = project_command_completer,
-				wrap_lines=False,
-				complete_while_typing=True,
-				default = project_name_to_update
-			)
+	# 		project_name_to_update_to = task_session.prompt(
+	# 			'Update the Project Name: ',
+	# 			completer = project_command_completer,
+	# 			wrap_lines=False,
+	# 			complete_while_typing=True,
+	# 			default = project_name_to_update
+	# 		)
 
-			task_list = select_column(task_table.search(where('project_name') == project_name_to_update), 'task_name')
+	# 		task_list = select_column(task_table.search(where('project_name') == project_name_to_update), 'task_name')
 		
-			for task in task_list:
-				task_table.update({'project_name': project_name_to_update_to}, (where('task_name') == task) & (where('project_name') == project_name_to_update))
-				project_table.update({'project_name': project_name_to_update_to}, where('project_name') == project_name_to_update)
+	# 		for task in task_list:
+	# 			task_table.update({'project_name': project_name_to_update_to}, (where('task_name') == task) & (where('project_name') == project_name_to_update))
+	# 			project_table.update({'project_name': project_name_to_update_to}, where('project_name') == project_name_to_update)
 			
-			custom_print_green(f'Project "{project_name_to_update}" has been successfully updated to "{project_name_to_update_to}"')		
-		else:
-			custom_print_red('That Project does not exist, please try again.')		
+	# 		custom_print_green(f'Project "{project_name_to_update}" has been successfully updated to "{project_name_to_update_to}"')		
+	# 	else:
+	# 		custom_print_red('That Project does not exist, please try again.')		
 
 	else:
 		custom_print_red('Not a valid command. Press TAB to view list of possible commands.')
