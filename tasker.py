@@ -60,7 +60,9 @@ command_list = ['add_running_task',
 				'pause_all_tasks', 
 				'delete_completed_tasks',
 				'complete_task_manually',
-				'update_project_name']
+				'timesheet_report'
+				# 'update_project_name'
+				]
 sorted_commands = sorted(command_list, key=str.lower)
 
 def convert_to_timedelta(value):
@@ -196,7 +198,8 @@ def output_task_table(dict_list, columns):
 		cli_table.add_row([
 			task['task_name'], 
 			task['project_name'],
-			task['start_date'], task['end_date'], 
+			task['start_date'], 
+			task['end_date'], 
 			task['last_restart_date'], 
 			task['last_paused_date'], 
 			task['paused'], 
@@ -708,6 +711,35 @@ while 1:
 		else:
 			custom_print_red('That Task does not exist or has been completed, please try again.')
 	
+	elif user_input == 'timesheet_report':
+		timesheet_report = pd.DataFrame()
+		tasks = pd.DataFrame(task_table.all())
+
+		timesheet_report['task_name'] = tasks['task_name']
+		timesheet_report['project_name'] = tasks['project_name']
+		timesheet_report['duration'] = tasks['duration']
+
+		total_duration = pd.to_timedelta(tasks['duration']).sum()
+		proportions = (pd.to_timedelta(tasks['duration']) / total_duration)
+
+		timesheet_report['percentages'] = round(proportions * 100, 2)
+		timesheet_report['timesheet_hours'] = proportions * 35
+
+		cli_table = PrettyTable(hrules=ALL)
+		cli_table.field_names = ['task_name', 'project_name', 'duration', 'percentages', 'timesheet_hours']
+
+		for task in timesheet_report.T.to_dict().values():
+			cli_table.add_row([
+				task['task_name'], 
+				task['project_name'],
+				task['duration'], 
+				task['percentages'], 
+				task['timesheet_hours']])
+		echo(cli_table)
+
+
+
+
 	# elif user_input == 'update_project_name':
 
 	# 	# project_list = select_column(project_table.all(), 'project_name')

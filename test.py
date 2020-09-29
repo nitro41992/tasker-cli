@@ -1,100 +1,117 @@
+import csv
 import os
+import time
+from datetime import datetime, timedelta
+import pandas as pd
+import numpy as np
+
+from click import echo
+from colorama import Fore, init
+from prettytable import ALL as ALL
+from prettytable import PrettyTable
+from prompt_toolkit import PromptSession, prompt
+from prompt_toolkit.completion import WordCompleter, FuzzyCompleter
+from prompt_toolkit.formatted_text import FormattedText
+from prompt_toolkit.history import FileHistory
+from prompt_toolkit.styles import Style
 from tinydb import Query, TinyDB, where
 from tinydb.operations import delete
+from art import text2art
+
+style = Style.from_dict({'':'gold'})
+prompt_symbol = FormattedText([('gold bold', '<< tasker >> ')])
 
 dirname = os.path.dirname(__file__)
 datafile = os.path.join(dirname, 'db.json')
 db = TinyDB(datafile)
 task_table = db.table('tasks')
 project_table = db.table('projects')
+name_table = db.table('names')
 
-def select_column(input_list, column1, column2=''):
-	if column2 == '':
-		return [dict_row[column1] for dict_row in input_list]
-	elif column2 != '':
-		out = []
-		for dict_row in input_list:
-			c1 = dict_row[column1]
-			c2 = dict_row[column2]
-			row = f'{c1} - {c2}'
-			out.append(row)
-		return(out)
+number_of_concurrent_tasks = 3
+max_line_length = 25
+project_list = []
+hcis_codes = pd.read_csv('HCIS_Codes.csv')
+project_list = hcis_codes['Healthcare Division Program Name / Notes'] + ': ' + hcis_codes['(Fund/Index)      RAD Id']
 
-def get_where_clauses(clauses):
-	where_clauses = ''
-	for key, value in clauses.items():
-		if type(value[1]) != bool:
-			clause = f"(where('{key}') {value[0]} '{value[1]}')"
-			where_clauses = where_clauses + clause + ' '
-		else:
-			clause = f"(where('{key}') {value[0]} {value[1]})"
-			where_clauses = where_clauses + clause + ' '
-	where_clauses = where_clauses.strip().replace(') (', ') & (')
-	return(where_clauses)
+format_date_str = "%A, %d %b %Y %I:%M:%S %p"
+format_delta_str_hours = "%d days %H:%M:%S"
+filename_format = '%Y-%m-%d %I%M-%p'
+zero_delta = '0 days 0:00:00'
 
-def get_table_values(table, clauses, return_type, column1 = '', column2 = ''):
-	# print(clauses)
-	if clauses != None:
-		where_clauses = get_where_clauses(clauses)
-	if return_type == 'column':
-		if clauses != None:
-			total_query = f"select_column({table}.search({where_clauses}), '{column1}', '{column2}')"
-		else:
-			total_query = f"select_column({table}.all(), '{column1}', '{column2}')"
-		print(total_query)
-		return(eval(total_query))
-	elif return_type == 'value':
-		total_query = f"select_column({table}.search({where_clauses}), '{column1}', '{column2}')[0]"
-		return(eval(total_query))
-	elif return_type == 'rows':
-		total_query = f"{table}.search({where_clauses})"
-		# print(total_query)
-		return(eval(total_query))
+task_table_columns = ["Task Name", 
+					"Project Name", 
+					"Start Date", 
+					"End Date", 
+					"Last Restart Date",
+					"Last Paused Date",
+					"Paused", 
+					"Duration"]
+command_list = [
+				'timesheet_report'
+				]
+sorted_commands = sorted(command_list, key=str.lower)
+
+# def custom_print_green(value):
+# 	return(echo(Fore.GREEN + value))
+
+# def custom_print_blue(value):
+# 	return(echo(Fore.BLUE + value))
+
+# def custom_print_red(value):
+# 	return(echo(Fore.RED + value))
+
+# command_completer = WordCompleter(
+# 	sorted_commands, 
+# 	ignore_case=True)
+
+# custom_print_blue(text2art('<< tasker >>'))
+# custom_print_blue('''
+# tasker is a simple tool to track your daily/weekly tasks and export them as needed.
+# You can add running tasks and start tracking the time right away or add paused tasks you can start later.
+# Simply add a task and what project it belongs to. tasker will add it to your task list.
+# Pause a task, or all tasks, and restar them later. tasker will aggregate total duration.
+# End the task completely to let tasker know you are done with the task and it is ready to be exported.
+
+# Press TAB to and scroll through to see the list of commands.
+# ''')
+
+# while 1:
+# 	user_input = prompt(prompt_symbol, completer=command_completer, wrap_lines=False, complete_while_typing=True, style=style)
+
+# 	if user_input == 'exit':
+
+# 		if os.path.exists('history.txt'):
+# 			os.remove('history.txt')
+		
+# 		custom_print_green('Goodbye.')
+# 		break
+
+# 	elif user_input == 'timesheet_report':
+
+timesheet_report = pd.DataFrame()
+tasks = pd.DataFrame(task_table.all())
+
+timesheet_report['task_name'] = tasks['task_name']
+timesheet_report['project_name'] = tasks['project_name']
+timesheet_report['duration'] = tasks['duration']
+
+total_duration = pd.to_timedelta(tasks['duration']).sum()
+proportions = (pd.to_timedelta(tasks['duration']) / total_duration)
+
+timesheet_report['percentages'] = round(proportions * 100, 2)
+timesheet_report['timesheet_hours'] = proportions * 35
+
+cli_table = PrettyTable(hrules=ALL)
+cli_table.field_names = ['task_name', 'project_name', 'duration', 'percentages', 'timesheet_hours']
+
+for task in timesheet_report.T.to_dict().values():
+	cli_table.add_row([
+		task['task_name'], 
+		task['project_name'],
+		task['duration'], 
+		task['percentages'], 
+		task['timesheet_hours']])
+echo(cli_table)
 
 
-# clauses = {'end_date': ('==', ''), 'paused': ('==', False)}
-# print(get_table_values('task_table', clauses, 'column', 'task_name', 'project_name'))
-# # select_column(task_table.search((where('end_date') == '') & (where('paused') == False)), 'task_name', 'project_name')
-
-# task_to_end = 'Test 3'
-# current_task_project = 'Test'
-# clauses = {'task_name': ('==', task_to_end), 'project_name': ('==', current_task_project)}
-# print(get_table_values('task_table', clauses, 'value', 'duration'))
-# # current_duration = select_column(task_table.search((where('task_name') == task_to_end) & (where('project_name') == current_task_project)), 'duration')[0]
-
-# clauses = {'end_date': ('!=', '')}
-# print(get_table_values('task_table', clauses, 'rows'))
-# # completed_tasks =  task_table.search(where('end_date') != '')
-
-
-# print(get_table_values('task_table', None, 'column', 'task_name'))
-# # task_list = select_column(task_table.all(), 'task_name')
-
-# clauses = {'end_date': ('==', '')}
-# print(get_table_values('task_table', clauses, 'column', 'task_name'))
-# # task_list = select_column(task_table.search(where('end_date') == ''), 'task_name')
-
-# task_project = 'Test'
-# project_clause = {'project_name': ('==', task_project)}
-# existing_task_names = get_table_values('task_table', project_clause, 'column', 'task_name')
-
-
-# task_to_end = 'New Running Test'
-# current_task_project = 'Test'
-# unique_clause = {'task_name': ('==', task_to_end), 'project_name': ('==', current_task_project)}
-# current_duration = get_table_values('task_table', unique_clause, 'value', 'duration')
-# print(current_duration)
-
-
-# running_tasks_by_project = {'end_date': ('==', ''), 'project_name': ('==', current_task_project)}
-# paused_tasks = get_table_values('task_table', running_tasks_by_project, 'column', 'task_name')
-# print(paused_tasks)
-
-
-# task_list = get_table_values('task_table', None, 'column', 'task_name', 'project_name')
-# print(task_list)
-
-current_task_project = 'Test'
-any_project_clause = {'project_name': ('==', current_task_project)}
-task_list = get_table_values('task_table', any_project_clause, 'column', 'project_name')
-print(task_list)
