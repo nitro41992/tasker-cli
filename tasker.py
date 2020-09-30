@@ -16,6 +16,12 @@ from prompt_toolkit.styles import Style
 from tinydb import Query, TinyDB, where
 from tinydb.operations import delete
 from art import text2art
+import asyncio
+import selectors
+
+selector = selectors.SelectSelector()
+loop = asyncio.SelectorEventLoop(selector)
+asyncio.set_event_loop(loop)
 
 style = Style.from_dict({'':'gold'})
 prompt_symbol = FormattedText([('gold bold', '<< tasker >> ')])
@@ -30,9 +36,34 @@ name_table = db.table('names')
 number_of_concurrent_tasks = 3
 max_line_length = 25
 project_list = []
-hcis_codes = pd.read_csv('HCIS_Codes.csv')
-project_list = hcis_codes['Healthcare Division Program Name / Notes'] + ': ' + hcis_codes['(Fund/Index)      RAD Id']
 
+
+hcis_codes = {'175015' : 'Non grant related expenses',
+'175038' : 'Realytics services for NJII clients',
+'380D17' : 'Do not use this index',
+'382F21' : '2016 and 2017 program onboarding',
+'382F22' : '2017 Onboarding Milestone program',
+'382F23' : 'NJIIS',
+'382F24' : 'emPOLST project',
+'382F25' : 'Consumer access project',
+'382F26' : 'Consent management project',
+'382F27' : '2016 Onboarding Milestone program',
+'382F28' : 'Perinatal Risk Assessment or PRA registry proejct',
+'382F29' : 'MPP program (Core index)',
+'382F30' : 'MPP program (Milestone index)',
+'382M01' : 'NJHIN management (please do not use this unless indicated by Jen)',
+'382M02' : 'SUD program (Core index)',
+'382M03' : 'SUD program (Milestone index)',
+'382M04' : 'Lead registry project',
+'382M05' : 'Contact tracing (CDRSS project)',
+'104000' : 'HCIS non service line related index for NJII employees',
+'104010' : 'MIPS index for NJII employees',
+'104040' : 'DSRIP index for NJII employees',
+'104050' : 'Aetna index for NJII employees',
+'104060' : 'Relytics index for NJII employees'}
+
+hcis_codes = pd.DataFrame(hcis_codes.items(), columns = ['Index', 'Description']) 
+project_list = hcis_codes['Description'] + ': ' + hcis_codes['Index']
 format_date_str = "%A, %d %b %Y %I:%M:%S %p"
 format_delta_str_hours = "%d days %H:%M:%S"
 filename_format = '%Y-%m-%d %I%M-%p'
@@ -64,6 +95,7 @@ command_list = ['add_running_task',
 				# 'update_project_name'
 				]
 sorted_commands = sorted(command_list, key=str.lower)
+
 
 def convert_to_timedelta(value):
 	value = str(value)
@@ -712,31 +744,42 @@ while 1:
 			custom_print_red('That Task does not exist or has been completed, please try again.')
 	
 	elif user_input == 'timesheet_report':
-		timesheet_report = pd.DataFrame()
-		tasks = pd.DataFrame(task_table.all())
+		
+		task_session = PromptSession()
+		timesheet_duration = task_session.prompt(
+			'Enter number of hours for timesheet calculation: ',
+			wrap_lines=False,
+			complete_while_typing=True,
+			default = '70'
+		)
 
-		timesheet_report['task_name'] = tasks['task_name']
-		timesheet_report['project_name'] = tasks['project_name']
-		timesheet_report['duration'] = tasks['duration']
+		if timesheet_duration and timesheet_duration.isnumeric():
+			timesheet_report = pd.DataFrame()
+			tasks = pd.DataFrame(task_table.all())
 
-		total_duration = pd.to_timedelta(tasks['duration']).sum()
-		proportions = (pd.to_timedelta(tasks['duration']) / total_duration)
+			timesheet_report['task_name'] = tasks['task_name']
+			timesheet_report['project_name'] = tasks['project_name']
+			timesheet_report['duration'] = tasks['duration']
 
-		timesheet_report['percentages'] = round(proportions * 100, 2)
-		timesheet_report['timesheet_hours'] = proportions * 70
+			total_duration = pd.to_timedelta(tasks['duration']).sum()
+			proportions = (pd.to_timedelta(tasks['duration']) / total_duration)
 
-		cli_table = PrettyTable(hrules=ALL)
-		cli_table.field_names = ['task_name', 'project_name', 'duration', 'percentages', 'timesheet_hours']
+			timesheet_report['percentages'] = round(proportions * 100, 2)
+			timesheet_report['timesheet_hours'] = round(proportions * int(timesheet_duration), 0)
 
-		for task in timesheet_report.T.to_dict().values():
-			cli_table.add_row([
-				task['task_name'], 
-				task['project_name'],
-				task['duration'], 
-				task['percentages'], 
-				task['timesheet_hours']])
-		echo(cli_table)
+			cli_table = PrettyTable(hrules=ALL)
+			cli_table.field_names = ['task_name', 'project_name', 'duration', 'percentages', 'timesheet_hours']
 
+			for task in timesheet_report.T.to_dict().values():
+				cli_table.add_row([
+					task['task_name'], 
+					task['project_name'],
+					task['duration'], 
+					task['percentages'], 
+					task['timesheet_hours']])
+			echo(cli_table)
+		else:
+			custom_print_red('Please enter a valid duration (in hours) for timesheet calculation.')
 
 
 
